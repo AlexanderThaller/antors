@@ -442,8 +442,8 @@ impl Build {
         writer: &mut Writer,
         _report: &mut Report,
     ) -> Result<(), BuildError> {
-        for asset in antors_ui::assets::ASSETS {
-            writer.file(&format!("_/{}", asset.path), asset.contents)?;
+        for asset in antors_ui::assets::assets() {
+            writer.file(&format!("_/{}", asset.path), &asset.contents)?;
         }
 
         let title = self

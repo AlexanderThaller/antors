@@ -1,56 +1,21 @@
-/* antors default UI.
+/* antors' page shell.
  *
- * Two stylesheets meet here, and the seam is worth knowing about.
+ * This is only the frame: the navbar, the navigation tree, the toolbar, the
+ * outline beside the text, and the footer. Antora has those and a standalone
+ * `AsciiDoc` page does not, so they are this project's own.
  *
- * Everything inside `.doc` — the article — is
- * [`adocers-html`](https://crates.io/crates/adocers-html)'s stylesheet, scoped.
- * That is not politeness: the back end's own markup is styled by those rules,
- * and a mermaid diagram it draws carries theme overrides written against the
- * custom properties they declare. A stylesheet that redefined the article in
- * its own terms would leave `fill: var(--code-bg)` resolving to nothing, and a
- * diagram of black boxes.
- *
- * Everything outside `.doc` — the navbar, the navigation, the toolbar, the
- * outline, the footer — is this project's own, because Antora has those and a
- * standalone page does not.
- *
- * The exception in both directions is the admonition, which is styled here as a
- * bordered box with a coloured edge rather than as Asciidoctor's icon column.
+ * The article itself is styled by `adocers-html`, whose stylesheet is composed
+ * with this one at build time — see `antors_ui::assets::stylesheet`. What is
+ * here for the article is only what the back end does not style: a keyboard
+ * key, a button, a highlight, a link to an attachment.
  */
 
 :root {
   color-scheme: light dark;
 
-  /* ---- adocers' palette, which the article and its diagrams are written
-     against. Renaming any of these breaks a drawing, not just a colour. ---- */
-  --bg: #fdfdfd;
-  --fg: #1c1e21;
-  --muted: #656d77;
-  --rule: #dcdfe4;
-  --accent: #1565a8;
-  --code-bg: #f5f6f8;
-  --sidebar-bg: #f2f4f7;
-
-  /* Asciidoctor's own admonition colours. */
-  --admon-note: #19407c;
-  --admon-tip: #b58900;
-  --admon-important: #bf6900;
-  --admon-caution: #bf3400;
-  --admon-warning: #bf0000;
-
-  /* Syntax highlighting. */
-  --hl-comment: #656d77;
-  --hl-keyword: #cf222e;
-  --hl-string: #0a3069;
-  --hl-number: #0550ae;
-  --hl-function: #6639ba;
-  --hl-type: #953800;
-  --hl-constant: #0550ae;
-  --hl-property: #0550ae;
-  --hl-tag: #116329;
-  --hl-punctuation: #57606a;
-
-  /* ---- the page shell, which is this project's own ---- */
+  /* The palette, the admonition colours and the highlighting colours are
+     `adocers-html`'s and are prepended to this file; only the shell's own are
+     declared here. */
   --navbar-bg: #1c2430;
   --navbar-fg: #e8eaed;
   --navbar-muted: #9aa4b1;
@@ -66,34 +31,12 @@
   --shadow: 0 2px 8px rgba(16, 22, 30, 0.12);
 }
 
+/* Guarded the same way the back end guards its own dark block — which is to
+   say not at all beyond the media query. There is no theme switch in the shell,
+   and half a switch, working on the frame and not on the article, would be
+   worse than none. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #16181c;
-    --fg: #dfe3e8;
-    --muted: #9aa3ad;
-    --rule: #2e3339;
-    --accent: #6cb2f0;
-    --code-bg: #1e2126;
-    --sidebar-bg: #1e2126;
-
-    /* Lightened, because Asciidoctor's are chosen against a white page. */
-    --admon-note: #6ea8e8;
-    --admon-tip: #e3b341;
-    --admon-important: #e08c3e;
-    --admon-caution: #f0764a;
-    --admon-warning: #f0716f;
-
-    --hl-comment: #8b949e;
-    --hl-keyword: #ff7b72;
-    --hl-string: #a5d6ff;
-    --hl-number: #79c0ff;
-    --hl-function: #d2a8ff;
-    --hl-type: #ffa657;
-    --hl-constant: #79c0ff;
-    --hl-property: #79c0ff;
-    --hl-tag: #7ee787;
-    --hl-punctuation: #8b949e;
-
+  :root {
     --navbar-bg: #0f1419;
     --accent-soft: #1b2733;
     --shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
@@ -548,272 +491,8 @@ body.-toc .toc.sidebar { display: none; }
 .footer a { color: inherit; }
 
 /* ====================================================================== */
-/* The article — adocers' stylesheet, scoped to `.doc`                     */
+/* What the back end does not style                                       */
 /* ====================================================================== */
-
-.doc h1, .doc h2, .doc h3, .doc h4, .doc h5, .doc h6 {
-  line-height: 1.25;
-  margin: 2rem 0 0.75rem;
-  font-weight: 600;
-  scroll-margin-top: calc(var(--navbar-height) + var(--toolbar-height) + 1rem);
-}
-
-.doc h1 { font-size: 2rem; margin-top: 0; }
-.doc h2 { font-size: 1.6rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--rule); }
-.doc h3 { font-size: 1.3rem; }
-.doc h4 { font-size: 1.1rem; }
-.doc h5, .doc h6 { font-size: 1rem; }
-.doc h1.page { margin-bottom: 1.25rem; }
-.doc h1 .subtitle { color: var(--muted); font-weight: 400; }
-
-/* `:sectanchors:` puts an empty link before a heading, which needs a mark of
-   its own to be worth anything. It sits in the margin so the heading does not
-   move when it appears. */
-.doc h1 .anchor, .doc h2 .anchor, .doc h3 .anchor,
-.doc h4 .anchor, .doc h5 .anchor, .doc h6 .anchor {
-  position: absolute; margin-left: -1em; width: 1em;
-  opacity: 0; text-align: center; font-weight: 400; color: var(--muted);
-}
-
-.doc h1 .anchor::before, .doc h2 .anchor::before, .doc h3 .anchor::before,
-.doc h4 .anchor::before, .doc h5 .anchor::before, .doc h6 .anchor::before { content: "\00A7"; }
-
-.doc h1:hover .anchor, .doc h2:hover .anchor, .doc h3:hover .anchor,
-.doc h4:hover .anchor, .doc h5:hover .anchor, .doc h6:hover .anchor,
-.doc .anchor:focus { opacity: 1; }
-
-.doc h1 > .link, .doc h2 > .link, .doc h3 > .link,
-.doc h4 > .link, .doc h5 > .link, .doc h6 > .link { color: inherit; text-decoration: none; }
-
-.doc h1 > .link:hover, .doc h2 > .link:hover, .doc h3 > .link:hover,
-.doc h4 > .link:hover, .doc h5 > .link:hover, .doc h6 > .link:hover { text-decoration: underline; }
-
-/* A link in a run of text is underlined rather than only coloured. Where a
-   whole block is links — a heading, an image — the underline is noise. */
-.doc a { color: var(--accent); text-decoration: underline; text-underline-offset: 0.15em; }
-.doc a:hover { text-decoration-thickness: 2px; }
-.doc a.image, .doc a.anchor { text-decoration: none; }
-
-.doc p { margin: 0 0 1rem; }
-.doc hr { border: 0; border-top: 1px solid var(--rule); margin: 2rem 0; }
-
-/* What a document says about itself. */
-.doc > .details { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
-.doc > .details .detail { line-height: 1.5; }
-.doc > .details .label { font-weight: 600; }
-.doc .tag { display: inline-block; padding: 0.02em 0.5em; border: 1px solid var(--rule); border-radius: 999px; font-size: 0.9em; }
-.doc a:has(.tag) { text-decoration: none; }
-.doc a:hover .tag { border-color: var(--accent); color: var(--accent); }
-
-.doc .title { font-style: italic; color: var(--muted); margin-bottom: 0.4rem; font-size: 0.95rem; }
-
-/* Code */
-.doc code, .doc pre { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-size: 0.9em; }
-.doc code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 3px; }
-.doc pre { background: var(--code-bg); padding: 0.9rem 1rem; border-radius: 6px; overflow-x: auto; line-height: 1.45; margin: 0; }
-.doc pre code { background: none; padding: 0; }
-.doc pre:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.doc .listingblock, .doc .literalblock { margin-bottom: 1.25rem; }
-.doc .listingblock .content, .doc .literalblock .content { position: relative; }
-
-/* Syntax highlighting. Several tree-sitter captures share a colour on purpose:
-   a builtin function is still a function to a reader, and a listing that picks
-   out everything picks out nothing. */
-.hl-comment { color: var(--hl-comment); font-style: italic; }
-.hl-keyword { color: var(--hl-keyword); }
-.hl-string { color: var(--hl-string); }
-.hl-number { color: var(--hl-number); }
-.hl-constant { color: var(--hl-constant); }
-.hl-function { color: var(--hl-function); }
-.hl-type { color: var(--hl-type); }
-.hl-property { color: var(--hl-property); }
-.hl-attr { color: var(--hl-property); }
-.hl-tag { color: var(--hl-tag); }
-.hl-escape { color: var(--hl-number); }
-.hl-label { color: var(--hl-type); }
-.hl-punctuation, .hl-operator { color: var(--hl-punctuation); }
-.hl-variable, .hl-parameter, .hl-unknown { color: inherit; }
-
-/* A callout keeps its own weight against whatever the highlighter did. */
-.doc .listingblock .conum { color: var(--accent); font-weight: 600; font-style: normal; }
-
-/* A callout mark, drawn rather than written: Asciidoctor's markup names a Font
-   Awesome glyph, and nothing here pulls in that webfont. The number is in the
-   markup as data, so a circle and a counter are the whole of it, and the `(1)`
-   beside it — what a page with no stylesheet shows — comes off once it is drawn. */
-.doc .conum[data-value] {
-  display: inline-block; width: 1.3em; height: 1.3em; line-height: 1.3em;
-  border-radius: 50%; background: var(--accent); color: var(--bg);
-  text-align: center; font-family: inherit; font-size: 0.8em; font-style: normal;
-  font-weight: 600; vertical-align: 0.05em;
-}
-
-.doc .conum[data-value]::after { content: attr(data-value); }
-.doc .conum[data-value] + b { display: none; }
-
-/* The list beneath the block marks its items the same way, so an item and the
-   line it annotates carry the same mark. */
-.doc .colist.conums > ol { list-style: none; padding-left: 0; counter-reset: conum; }
-.doc .colist.conums > ol > li { counter-increment: conum; position: relative; padding-left: 2em; }
-.doc .colist.conums > ol > li::before {
-  content: counter(conum); position: absolute; left: 0; top: 0.1em;
-  display: inline-block; width: 1.3em; height: 1.3em; line-height: 1.3em;
-  border-radius: 50%; background: var(--accent); color: var(--bg);
-  text-align: center; font-size: 0.8em; font-weight: 600;
-}
-
-/* Asciidoctor's own table form, for a build that emits it. */
-.doc .colist > table { border-collapse: collapse; }
-.doc .colist > table td { padding: 0.15rem 0.5rem 0.15rem 0; vertical-align: top; }
-
-/* Quotes */
-.doc .quoteblock { margin: 1.25rem 0; }
-.doc .quoteblock blockquote { margin: 0; padding: 0.25rem 0 0.25rem 1.25rem; border-left: 4px solid var(--rule); color: var(--fg); }
-.doc .verseblock pre.content { background: none; padding: 0 0 0 1.25rem; border-left: 4px solid var(--rule); white-space: pre-wrap; }
-.doc .attribution { color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem; }
-.doc .attribution cite { font-style: italic; }
-
-/* A stem block is a displayed equation: it stands apart from the text the way a
-   figure does, and a long one scrolls rather than pushing the column wide. */
-.doc .stemblock { margin: 1.5rem 0; text-align: center; }
-.doc .stemblock > .content { overflow-x: auto; }
-
-/* ---- admonitions ------------------------------------------------------
- *
- * The one place this deliberately parts from adocers: a bordered box with a
- * coloured edge rather than an icon column with a rule beside it. The icon is
- * centred against the whole block rather than sitting at its top — the mark
- * stands for the block, and a tall one left it stranded at the ceiling.
- */
-
-.doc .admonitionblock {
-  margin: 1.4rem 0;
-  border: 1px solid var(--rule);
-  border-left: 3px solid var(--admon);
-  border-radius: var(--radius);
-  background: var(--sidebar-bg);
-}
-
-.doc .admonitionblock > table { width: 100%; border-collapse: collapse; border: 0; background: none; }
-
-.doc .admonitionblock td.icon {
-  width: 3.5rem;
-  padding: 0.9rem 0 0.9rem 0.9rem;
-  text-align: center;
-  vertical-align: middle;
-  color: var(--admon);
-}
-
-.doc .admonitionblock td.icon .icon { width: 1.75rem; height: 1.75rem; }
-
-.doc .admonitionblock td.icon .title {
-  margin: 0;
-  font-style: normal;
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 0.8rem;
-  letter-spacing: 0.03em;
-  color: var(--admon);
-}
-
-.doc .admonitionblock td.content { padding: 0.9rem 1rem; vertical-align: middle; }
-.doc .admonitionblock td.content > :last-child { margin-bottom: 0; }
-.doc .admonitionblock td.content > .title { text-transform: uppercase; font-style: normal; font-weight: 600; color: var(--fg); }
-
-.doc .admonitionblock.note { --admon: var(--admon-note); }
-.doc .admonitionblock.tip { --admon: var(--admon-tip); }
-.doc .admonitionblock.important { --admon: var(--admon-important); }
-.doc .admonitionblock.caution { --admon: var(--admon-caution); }
-.doc .admonitionblock.warning { --admon: var(--admon-warning); }
-
-/* Sidebars, examples, open blocks */
-.doc .sidebarblock { background: var(--sidebar-bg); border-radius: 6px; padding: 1rem 1.25rem; margin: 1.25rem 0; }
-.doc .sidebarblock > .content > :last-child { margin-bottom: 0; }
-.doc .exampleblock > .content { border: 1px solid var(--rule); border-radius: 6px; padding: 1rem 1.25rem; }
-.doc .exampleblock > .content > :last-child { margin-bottom: 0; }
-.doc .exampleblock, .doc .openblock { margin: 1.25rem 0; }
-.doc details { margin: 1.25rem 0; }
-.doc details > summary { cursor: pointer; }
-.doc details > .content { border: 1px solid var(--rule); border-radius: 6px; padding: 1rem 1.25rem; }
-.doc details > .content > :last-child { margin-bottom: 0; }
-
-/* Lists */
-.doc ul, .doc ol { padding-left: 1.5rem; }
-.doc .ulist, .doc .olist, .doc .dlist, .doc .colist, .doc .qlist, .doc .hdlist { margin-bottom: 1.25rem; }
-.doc .ulist li p, .doc .olist li p, .doc .dlist dd p { margin-bottom: 0.35rem; }
-.doc .checklist { list-style: none; padding-left: 0.5rem; }
-
-/* The bullet styles an author can ask for by name. */
-.doc ul.square { list-style-type: square; }
-.doc ul.circle { list-style-type: circle; }
-.doc ul.disc { list-style-type: disc; }
-.doc ul.none, .doc ul.no-bullet { list-style: none; }
-.doc ul.unstyled { list-style: none; padding-left: 0; }
-.doc ul.inline { list-style: none; padding-left: 0; display: flex; flex-wrap: wrap; gap: 0 1rem; }
-.doc ul.inline > li > p { margin: 0; }
-
-/* A styled description list carries no class on its terms, so the term is
-   styled by where it sits rather than by what it is. */
-.doc .dlist dt { font-weight: 600; margin-top: 0.75rem; }
-.doc dd { margin-left: 1.5rem; }
-.doc .hdlist table { border-collapse: collapse; }
-.doc .hdlist td { padding: 0.25rem 1rem 0.25rem 0; vertical-align: top; }
-.doc .hdlist td.hdlist1 { font-weight: 600; }
-.doc .qlist.qanda > ol > li > p:first-child { font-weight: 600; }
-
-/* Images and media */
-.doc .imageblock, .doc .videoblock, .doc .audioblock { margin: 1.5rem 0; }
-.doc .imageblock .content, .doc .videoblock .content { text-align: center; }
-.doc img, .doc video, .doc audio { max-width: 100%; height: auto; }
-.doc .imageblock .title { text-align: center; margin-top: 0.5rem; }
-.doc span.image.right { float: right; margin-left: 1rem; }
-.doc span.image.left { float: left; margin-right: 1rem; }
-.doc .videoblock iframe { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: var(--radius); }
-
-/* Diagrams */
-.doc .diagram > .content { text-align: center; overflow-x: auto; }
-.doc pre.mermaid { background: none; padding: 0; margin: 0; text-align: center; line-height: normal; }
-/* A diagram is held to the column, whatever width it was drawn at. The scroll
-   on the box above is the fallback for one that cannot be made to fit. */
-.doc .diagram svg, .doc pre.mermaid svg { display: inline-block; vertical-align: top; max-width: 100%; height: auto; }
-.doc pre.mermaid:not([data-processed]) { text-align: left; background: var(--code-bg); padding: 0.9rem 1rem; border-radius: 6px; }
-
-/* Tables */
-.doc table.tableblock { border-collapse: collapse; margin: 1.5rem 0; font-size: 0.95rem; }
-.doc table.tableblock.stretch { width: 100%; }
-.doc table.tableblock.fit-content { width: auto; }
-.doc table.tableblock caption.title { text-align: left; margin-bottom: 0.5rem; }
-.doc table.tableblock th, .doc table.tableblock td { padding: 0.5rem 0.75rem; vertical-align: top; }
-.doc table.tableblock th { font-weight: 600; text-align: left; }
-.doc table.tableblock p.tableblock { margin: 0; }
-.doc table.frame-all { border: 1px solid var(--rule); }
-.doc table.frame-ends { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
-.doc table.frame-sides { border-left: 1px solid var(--rule); border-right: 1px solid var(--rule); }
-.doc table.grid-all th, .doc table.grid-all td { border: 1px solid var(--rule); }
-.doc table.grid-rows th, .doc table.grid-rows td { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
-.doc table.grid-cols th, .doc table.grid-cols td { border-left: 1px solid var(--rule); border-right: 1px solid var(--rule); }
-.doc table.stripes-even tbody tr:nth-child(even),
-.doc table.stripes-odd tbody tr:nth-child(odd),
-.doc table.stripes-all tbody tr { background: var(--code-bg); }
-.doc table.stripes-hover tbody tr:hover { background: var(--code-bg); }
-
-/* A cell's own alignment has to out-specify the defaults above, or a header
-   cell would silently ignore the `^` or `>` its author wrote. */
-.doc table.tableblock td.halign-center, .doc table.tableblock th.halign-center { text-align: center; }
-.doc table.tableblock td.halign-right, .doc table.tableblock th.halign-right { text-align: right; }
-.doc table.tableblock td.halign-left, .doc table.tableblock th.halign-left { text-align: left; }
-.doc table.tableblock td.valign-middle, .doc table.tableblock th.valign-middle { vertical-align: middle; }
-.doc table.tableblock td.valign-bottom, .doc table.tableblock th.valign-bottom { vertical-align: bottom; }
-
-/* A literal cell is still a table cell: the code-block chrome would make the
-   row taller than its neighbours and push its text out of line with them. */
-.doc table.tableblock .literal pre { background: none; padding: 0; border-radius: 0; }
-
-/* Footnotes */
-.doc #footnotes { margin-top: 2.5rem; font-size: 0.9rem; color: var(--muted); }
-.doc #footnotes hr { margin: 0 0 1rem; }
-.doc #footnotes .footnote { margin-bottom: 0.5rem; padding-left: 1.5rem; text-indent: -1.5rem; }
-.doc #footnotes .footnote > a { font-weight: 600; }
 
 /* Inline odds and ends */
 .doc mark { padding: 0 0.15em; background: #fff3b0; color: #1c1e21; border-radius: 2px; }
@@ -835,6 +514,12 @@ body.-toc .toc.sidebar { display: none; }
   mask: var(--file-icon) center / contain no-repeat;
   --file-icon: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 2H6v20h12V6Zm0 0 4 4h-4Z"/></svg>');
 }
+
+/* The pagination sits inside the article, so the article's own link styling
+   reaches it. A row of two links is not a run of text and does not want the
+   underline that makes one legible. */
+.doc .pagination a { text-decoration: none; }
+.doc .pagination a:hover { text-decoration: underline; }
 
 /* The pagination sits inside the article, so the article's own link styling
    reaches it. A row of two links is not a run of text and does not want the

@@ -137,17 +137,26 @@ left out. Everything else in the namespace is the author's own and is shown.
 
 ### The stylesheet
 
-Everything inside `article.doc` is [`adocers-html`]'s own stylesheet, scoped.
-That is not politeness. The back end's markup is styled by those rules, and a
-mermaid diagram it draws carries theme overrides written against the custom
-properties they declare — a stylesheet that redefined the article in its own
-terms leaves `fill: var(--code-bg)` resolving to nothing, and a diagram of black
-boxes. Everything outside `.doc` is this project's own, because Antora has a
-navbar, a navigation tree, a toolbar and an outline and a standalone page does
-not.
+The article's stylesheet is not written here. It is [`adocers-html`]'s, used
+rather than imitated:
 
-The one deliberate departure is the admonition, which is a bordered box with a
-coloured edge rather than Asciidoctor's icon column.
+```
+adocers_html::stylesheet_variables()   /* at the top level */
+shell.css                              /* this project's frame */
+article.doc { adocers_html::document_stylesheet() }
+```
+
+The back end's markup is styled by those rules, and a mermaid diagram it draws
+carries theme overrides written against the custom properties they declare. A
+stylesheet that redefined the article in its own terms — as this one once did —
+leaves `fill: var(--code-bg)` resolving to nothing and paints every diagram
+node solid black. So the properties are declared at the top level where a
+diagram can reach them, and the document rules go in *nested and untouched*,
+which is what makes it reuse rather than a copy with a different bug in it.
+
+Only the frame is this project's: the navbar, the navigation tree, the toolbar,
+the outline beside the text. That, and the handful of things the back end does
+not style — a keyboard key, a button, a link to an attachment.
 
 [`adocers-html`]: https://crates.io/crates/adocers-html
 
@@ -172,6 +181,11 @@ saying so, would be worse than no index.
 `--no-tags-page` leaves it out.
 
 ## How it fits together
+
+While the two are developed together, `adocers-html` and `adocers-render-core`
+are path dependencies on a sibling checkout of
+[adocers](https://github.com/AlexanderThaller/adocers); swap the `path` in the
+workspace manifest for a version before publishing.
 
 ```
 antors            the command line

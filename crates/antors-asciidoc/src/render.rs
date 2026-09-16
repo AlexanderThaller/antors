@@ -283,6 +283,14 @@ impl Renderer {
                 highlight: self.options.highlight,
                 mermaid: self.options.mermaid,
                 math: self.options.math,
+
+                // The back end adds both of these to a *page* with a script,
+                // and a page is not what it is being asked for. The site shell
+                // supplies its own copy button and its own reading mark, over
+                // markup it also renders — the navigation and the outline — so
+                // one script covers both rather than three covering parts.
+                copy: false,
+                mark_reading: false,
             },
         )
         .html;

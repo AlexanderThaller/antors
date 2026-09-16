@@ -9,5 +9,8 @@ description = "The page shell for an Antora site: navbar, navigation sidebar, to
 keywords = ["antora", "asciidoc", "documentation", "html"]
 categories = ["template-engine", "text-processing"]
 
+[dependencies]
+adocers-html.workspace = true
+
 [lints]
 workspace = true
