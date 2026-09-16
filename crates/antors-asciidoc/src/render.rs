@@ -209,7 +209,7 @@ impl Renderer {
     /// anywhere a document attribute may be, and because a title assembled from
     /// an attribute reference needs the attributes resolved to read it.
     pub fn header_of(&self, page: &SourceFile, component_version: &ComponentVersion) -> Header {
-        let Ok(source) = std::fs::read_to_string(&page.path) else {
+        let Ok(source) = page.contents.read_to_string() else {
             return Header::default();
         };
 
@@ -237,7 +237,7 @@ impl Renderer {
         page: &SourceFile,
         component_version: &ComponentVersion,
     ) -> std::io::Result<Rendered> {
-        let source = std::fs::read_to_string(&page.path)?;
+        let source = page.contents.read_to_string()?;
 
         let (mut parser, wiring) = self.parser_for(page, component_version);
         let mut document = parser.parse_deferred(&source);

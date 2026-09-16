@@ -11,10 +11,10 @@ use std::{
         BTreeMap,
         btree_map::Entry,
     },
-    path::PathBuf,
     sync::Arc,
 };
 
+use crate::contents::Contents;
 use antors_model::{
     descriptor::Descriptor,
     resource::{
@@ -41,8 +41,8 @@ pub struct SourceFile {
     /// Where it came from.
     pub origin: Arc<Origin>,
 
-    /// Where it is on disk.
-    pub path: PathBuf,
+    /// Its bytes, or the way to get them.
+    pub contents: Contents,
 
     /// Its path within the component version, from the `antora.yml` down —
     /// what `page-relative-src-path` reports and what an edit link is built
@@ -75,6 +75,11 @@ impl SourceFile {
     /// The URL this file is published at, or `None` if it is not.
     pub fn url(&self) -> Option<&str> {
         self.location.as_ref().map(|location| location.url.as_str())
+    }
+
+    /// How to name this file in a message.
+    pub fn describe(&self) -> String {
+        self.contents.describe(&self.key.to_string())
     }
 
     /// What a reference with no text of its own should show.
@@ -191,10 +196,10 @@ pub enum CatalogError {
         key: Key,
 
         /// The file that claimed it first.
-        first: PathBuf,
+        first: String,
 
         /// The file that claimed it second.
-        second: PathBuf,
+        second: String,
     },
 }
 
@@ -236,23 +241,23 @@ impl Catalog {
         &mut self,
         key: Key,
         origin: Arc<Origin>,
-        path: PathBuf,
+        contents: Contents,
         relative_src_path: String,
     ) -> Result<(), Box<CatalogError>> {
         let location = locate(&key, self.style);
 
         match self.files.entry(key.clone()) {
             Entry::Occupied(occupied) => Err(Box::new(CatalogError::Duplicate {
+                first: occupied.get().describe(),
+                second: contents.describe(&key.to_string()),
                 key,
-                first: occupied.get().path.clone(),
-                second: path,
             })),
 
             Entry::Vacant(vacant) => {
                 vacant.insert(SourceFile {
                     key,
                     origin,
-                    path,
+                    contents,
                     relative_src_path,
                     location,
                     title: None,
@@ -285,23 +290,23 @@ impl Catalog {
         };
 
         let origin = Arc::clone(&page.origin);
-        let path = page.path.clone();
+        let contents = page.contents.clone();
         let relative_src_path = page.relative_src_path.clone();
         let title = page.title.clone();
         let location = locate(&alias, self.style);
 
         match self.files.entry(alias.clone()) {
             Entry::Occupied(occupied) => Err(Box::new(CatalogError::Duplicate {
+                first: occupied.get().describe(),
+                second: contents.describe(&alias.to_string()),
                 key: alias,
-                first: occupied.get().path.clone(),
-                second: path,
             })),
 
             Entry::Vacant(vacant) => {
                 vacant.insert(SourceFile {
                     key: alias,
                     origin,
-                    path,
+                    contents,
                     relative_src_path,
                     location,
                     title,

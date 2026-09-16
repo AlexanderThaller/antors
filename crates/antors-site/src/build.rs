@@ -350,8 +350,14 @@ impl Build {
                     continue;
                 };
 
-                if let Err(error) = writer.copy(&location.out, &file.path) {
-                    report.error(&file.relative_src_path, error.to_string());
+                match file.contents.read() {
+                    Ok(bytes) => {
+                        if let Err(error) = writer.file(&location.out, &bytes) {
+                            report.error(&file.relative_src_path, error.to_string());
+                        }
+                    }
+
+                    Err(error) => report.error(&file.relative_src_path, error.to_string()),
                 }
             }
         }

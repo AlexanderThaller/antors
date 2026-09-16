@@ -16,6 +16,13 @@ antors-site = { version = "0.1", path = "crates/antors-site" }
 antors-ui = { version = "0.1", path = "crates/antors-ui" }
 adocers-html = { version = "0.1", default-features = false }
 anyhow = "1"
+# Only what reading a repository needs: refs, trees and blobs. No network, no
+# worktree checkout, no index — a build reads history, it does not change it.
+gix = { version = "0.87", default-features = false, features = [
+  "revision",
+  "max-performance-safe",
+  "sha1",
+] }
 asciidoc-parser = "0.31"
 serde = { version = "1", features = ["derive"] }
 serde_yaml_ng = "0.10"

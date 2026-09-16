@@ -62,21 +62,6 @@ impl Writer {
         Ok(())
     }
 
-    /// Copy a file in from a content source.
-    pub(crate) fn copy(&mut self, path: &str, from: &Path) -> Result<(), BuildError> {
-        let destination = self.root.join(path);
-        Self::parent(&destination)?;
-
-        std::fs::copy(from, &destination).map_err(|error| BuildError::Write {
-            path: destination,
-            error,
-        })?;
-
-        self.files += 1;
-
-        Ok(())
-    }
-
     /// Write bytes, creating the directories they go in.
     fn write(&self, path: &str, contents: &[u8]) -> Result<(), BuildError> {
         let destination = self.root.join(path);

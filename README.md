@@ -17,6 +17,8 @@ here re-implements AsciiDoc; what it adds is Antora's model on top of it.
 | | |
 | --- | --- |
 | Playbook | the whole schema parses — `site`, `content`, `urls`, `ui`, `asciidoc`, `output`, `runtime`, `git`, `network`, `antora` |
+| Refs | `branches:` and `tags:` from a local repository, read out of git's object database; `worktrees:` decides which come off disk |
+| Git LFS | a pointer is followed to the object store, and a file that was never fetched is named rather than published as its pointer |
 | Components | multiple components, multiple versions, `display_version`, `prerelease`, `start_page` |
 | Versions | from `antora.yml`, or from a content source's `version:` — `true`, a literal, or ref-name patterns |
 | Modules | `ROOT` and named modules, with their own images and attachments |
@@ -36,11 +38,10 @@ Each of these is *reported* rather than skipped quietly: a build says which of
 the things the playbook configured it did not do, so a site moved here does not
 have to be diffed against Antora's to find out.
 
-- **Anything but the checked-out worktree.** A `url:` must name a directory on
-  this machine, and only the ref that is checked out is read. A source asking
-  for other branches or tags is told which ones were skipped. The seam for it is
-  [`antors_content::aggregate`](crates/antors-content/src/aggregate.rs), which
-  produces a `Catalog` that nothing else's shape depends on.
+- **Remote repositories.** A `url:` must name a directory on this machine.
+  Branches and tags within it are read; nothing is cloned or fetched. The seam
+  for it is [`antors_content::git`](crates/antors-content/src/git.rs), which
+  already reads refs the same way a fetched clone would be read.
 - **Antora UI bundles.** The page shell is built in, in
   [`antors-ui`](crates/antors-ui). It follows the default UI's class names, so a
   stylesheet written for Antora mostly applies, but a bundle's Handlebars

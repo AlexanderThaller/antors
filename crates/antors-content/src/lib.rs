@@ -17,6 +17,8 @@
 
 pub mod aggregate;
 pub mod catalog;
+pub mod contents;
+pub mod git;
 pub mod origin;
 
 pub use crate::{
@@ -26,5 +28,6 @@ pub use crate::{
         ComponentVersion,
         SourceFile,
     },
+    contents::Contents,
     origin::Origin,
 };

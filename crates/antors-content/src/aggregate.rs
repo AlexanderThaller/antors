@@ -39,6 +39,8 @@ use crate::{
         CatalogError,
         ComponentVersion,
     },
+    contents::Contents,
+    git,
     origin::{
         Origin,
         RefType,
@@ -117,19 +119,30 @@ pub enum AggregateError {
 /// catalog rather than swallowed.
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum Notice {
-    /// A source asked for refs that are not the checked-out worktree.
-    #[error(
-        "`{url}` asks for {refs}, and this build reads only the checked-out worktree (`{current}`)"
-    )]
-    UnreadableRefs {
+    /// A `branches:` or `tags:` pattern matched no ref in the repository.
+    #[error("`{url}` asks for `{pattern}`, which matches no {kind} there")]
+    NoSuchRefs {
         /// The source that asked.
         url: String,
 
         /// What it asked for, as written.
-        refs: String,
+        pattern: String,
 
-        /// What is actually checked out.
-        current: String,
+        /// Whether it was asking for branches or for tags.
+        kind: &'static str,
+    },
+
+    /// A ref matched but could not be read.
+    #[error("`{url}` at `{refname}`: {reason}")]
+    UnreadableRef {
+        /// The source the ref belongs to.
+        url: String,
+
+        /// The ref.
+        refname: String,
+
+        /// Why it could not be read.
+        reason: String,
     },
 }
 
@@ -157,7 +170,7 @@ pub fn aggregate(playbook: &Playbook) -> Result<Aggregated, AggregateError> {
     Ok(aggregated)
 }
 
-/// Collect every start path of one source.
+/// Collect every ref and start path of one source.
 fn collect_source(
     playbook: &Playbook,
     source: &Source,
@@ -169,103 +182,278 @@ fn collect_source(
         });
     }
 
-    let worktree = PathBuf::from(&source.url);
-    let repository = Repository::discover(&worktree);
-
-    // Only the checked-out worktree is read, so a source that asks for other
-    // refs gets what it asked for in part. Saying which part is the difference
-    // between a site that is missing a version and a site that is missing a
-    // version *and* nobody knows.
-    let unreadable: Vec<String> = source
-        .branches(&playbook.content)
-        .into_iter()
-        .chain(source.tags(&playbook.content))
-        .filter(|pattern| !names_the_worktree(pattern, &repository.refname))
-        .collect();
-
-    if !unreadable.is_empty() {
-        aggregated.notices.push(Notice::UnreadableRefs {
-            url: source.url.clone(),
-            refs: unreadable.join("`, `"),
-            current: repository.refname.clone(),
-        });
-    }
+    let root = PathBuf::from(&source.url);
+    let repository = git::Repository::discover(&root).ok();
 
     let edit_url_pattern = source
         .edit_url
         .clone()
         .or_else(|| playbook.content.edit_url.clone());
 
-    for start_path in source.start_paths() {
-        let root = worktree.join(&start_path);
+    let worktrees = source.worktrees(&playbook.content);
+    let version = source.version(&playbook.content);
 
-        let origin = Arc::new(Origin {
-            url: Some(source.url.clone()),
-            web_url: repository.remote.as_deref().and_then(web_url),
-            refname: repository.refname.clone(),
+    for reference in wanted_refs(source, playbook, repository.as_ref(), aggregated) {
+        // The checked-out ref is read from the worktree: it is already on disk,
+        // already filtered — Git LFS among them — and it is the one an author
+        // is editing, which is what a watching build needs to watch.
+        let from_worktree = reference.is_head
+            && worktrees.includes(&reference.name, Some(&reference.name))
+            && repository
+                .as_ref()
+                .is_none_or(|repository| repository.workdir().is_some());
 
-            // Only a worktree is read, and a worktree is always at a branch —
-            // a detached HEAD included, which git itself calls a branch-shaped
-            // thing rather than a tag.
-            reftype: RefType::Branch,
+        for start_path in source.start_paths() {
+            let origin = Arc::new(Origin {
+                url: Some(source.url.clone()),
+                web_url: repository
+                    .as_ref()
+                    .and_then(git::Repository::remote_url)
+                    .as_deref()
+                    .and_then(web_url),
+                refname: reference.name.clone(),
+                reftype: reference.kind,
+                start_path: start_path.clone(),
+                worktree: from_worktree
+                    .then(|| {
+                        repository
+                            .as_ref()
+                            .and_then(|repository| repository.workdir().map(Path::to_path_buf))
+                    })
+                    .flatten()
+                    .or_else(|| from_worktree.then(|| root.clone())),
+                edit_url_pattern: edit_url_pattern.clone(),
+            });
 
-            start_path: start_path.clone(),
-            worktree: Some(repository.root.clone()),
-            edit_url_pattern: edit_url_pattern.clone(),
-        });
+            let files = if from_worktree {
+                match worktree_files(&root.join(&start_path)) {
+                    Ok(files) => files,
 
-        collect_component_version(
-            &root,
-            &origin,
-            source.version(&playbook.content),
-            &mut aggregated.catalog,
-        )?;
+                    Err(error) => {
+                        return Err(error);
+                    }
+                }
+            } else {
+                let Some(repository) = repository.as_ref() else {
+                    continue;
+                };
+
+                match repository.read_tree(&reference.name, &start_path) {
+                    Ok(entries) => entries
+                        .into_iter()
+                        .map(|(entry, bytes)| (entry.path, Contents::from(bytes)))
+                        .collect(),
+
+                    Err(error) => {
+                        aggregated.notices.push(Notice::UnreadableRef {
+                            url: source.url.clone(),
+                            refname: reference.name.clone(),
+                            reason: error.to_string(),
+                        });
+
+                        continue;
+                    }
+                }
+            };
+
+            collect_component_version(
+                &files,
+                &origin,
+                version,
+                &root.join(&start_path),
+                &mut aggregated.catalog,
+            )?;
+        }
     }
 
     Ok(())
 }
 
-/// Whether a `branches:` or `tags:` pattern names the ref that is checked out.
+/// One ref a source asked for and the repository has.
+#[derive(Clone, Debug)]
+struct Ref {
+    /// Its short name.
+    name: String,
+
+    /// Whether it is a branch or a tag.
+    kind: RefType,
+
+    /// Whether it is the one checked out.
+    is_head: bool,
+}
+
+/// Which refs a source asks for, of those the repository has.
 ///
-/// `HEAD` and `.` are how a playbook says "whatever is checked out". Everything
-/// else is matched by name, or by a glob — the shapes a real playbook uses are
-/// a literal name and a trailing `*`, and anything more elaborate is treated as
-/// not matching, which reports the ref rather than quietly reading the wrong
-/// one.
-fn names_the_worktree(pattern: &str, current: &str) -> bool {
-    if pattern == "HEAD" || pattern == "." || pattern == "*" {
-        return true;
+/// A pattern that matches nothing is reported rather than ignored: a playbook
+/// naming a branch that was renamed would otherwise publish a site quietly
+/// missing a version.
+fn wanted_refs(
+    source: &Source,
+    playbook: &Playbook,
+    repository: Option<&git::Repository>,
+    aggregated: &mut Aggregated,
+) -> Vec<Ref> {
+    let head = repository.and_then(git::Repository::head);
+
+    // A directory that is not in a repository is still a directory of content.
+    // It has one ref, which is whatever is there.
+    let Some(repository) = repository else {
+        return vec![Ref {
+            name: head.unwrap_or_else(|| "HEAD".to_string()),
+            kind: RefType::Branch,
+            is_head: true,
+        }];
+    };
+
+    let branches = repository.branches();
+    let tags = repository.tags();
+
+    let mut wanted: Vec<Ref> = Vec::new();
+
+    for (patterns, kind, available) in [
+        (
+            source.branches(&playbook.content),
+            RefType::Branch,
+            &branches,
+        ),
+        (source.tags(&playbook.content), RefType::Tag, &tags),
+    ] {
+        for pattern in patterns {
+            // `HEAD` is how a playbook says "whatever is checked out", and is
+            // not a ref name to match against.
+            let matched: Vec<&String> = if pattern == "HEAD" || pattern == "." {
+                head.iter().collect()
+            } else {
+                available
+                    .iter()
+                    .filter(|name| matches_pattern(&pattern, name))
+                    .collect()
+            };
+
+            if matched.is_empty() {
+                aggregated.notices.push(Notice::NoSuchRefs {
+                    url: source.url.clone(),
+                    pattern: pattern.clone(),
+                    kind: if kind == RefType::Branch {
+                        "branch"
+                    } else {
+                        "tag"
+                    },
+                });
+
+                continue;
+            }
+
+            for name in matched {
+                if wanted.iter().any(|reference| reference.name == *name) {
+                    continue;
+                }
+
+                wanted.push(Ref {
+                    name: name.clone(),
+                    kind,
+                    is_head: head.as_deref() == Some(name.as_str()),
+                });
+            }
+        }
     }
 
-    match pattern.split_once('*') {
-        None => pattern == current,
+    wanted
+}
 
-        // A `*` in the middle, or more than one, is more than this
-        // understands.
-        Some((prefix, "")) => current.starts_with(prefix),
-        Some(_) => false,
+/// Whether a `branches:` or `tags:` glob matches a ref name.
+///
+/// The shapes a real playbook uses are a literal name, a trailing `*`, and a
+/// `{0..9}` digit class — `v{0..9}*` is Antora's own default for tags.
+fn matches_pattern(pattern: &str, name: &str) -> bool {
+    let mut rest = name;
+    let mut chars = pattern.chars().peekable();
+
+    while let Some(character) = chars.next() {
+        match character {
+            '*' => {
+                if chars.peek().is_none() {
+                    return true;
+                }
+
+                // A `*` in the middle is more than this understands, and
+                // guessing would publish the wrong branch.
+                return false;
+            }
+
+            '{' => {
+                let class: String = chars.by_ref().take_while(|c| *c != '}').collect();
+
+                let Some((low, high)) = class.split_once("..") else {
+                    return false;
+                };
+
+                let (Some(low), Some(high), Some(next)) =
+                    (low.chars().next(), high.chars().next(), rest.chars().next())
+                else {
+                    return false;
+                };
+
+                if next < low || next > high {
+                    return false;
+                }
+
+                rest = &rest[next.len_utf8()..];
+            }
+
+            literal => match rest.strip_prefix(literal) {
+                Some(tail) => rest = tail,
+                None => return false,
+            },
+        }
     }
+
+    rest.is_empty()
+}
+
+/// Every file under a worktree directory, as paths relative to it.
+fn worktree_files(root: &Path) -> Result<Vec<(String, Contents)>, AggregateError> {
+    if !root.is_dir() {
+        return Ok(Vec::new());
+    }
+
+    Ok(walk(root)?
+        .into_iter()
+        .filter_map(|path| {
+            let relative = relative_to(root, &path)?;
+            Some((relative, Contents::from(path)))
+        })
+        .collect())
 }
 
 /// Collect one start path: its descriptor, its modules and its navigation.
+///
+/// `files` is every file under the start path, however it was read — from a
+/// worktree or from a ref's tree. Which of the two it was is not a question
+/// this has to ask: a component version is the same component version either
+/// way, and keeping the difference to one place above is what makes that true.
 fn collect_component_version(
-    root: &Path,
+    files: &[(String, Contents)],
     origin: &Arc<Origin>,
     version: Option<&antors_model::playbook::VersionSpec>,
+    describe: &Path,
     catalog: &mut Catalog,
 ) -> Result<(), AggregateError> {
-    let descriptor_path = root.join("antora.yml");
-
-    if !descriptor_path.is_file() {
+    let Some((_, descriptor_contents)) = files.iter().find(|(path, _)| path == DESCRIPTOR_FILENAME)
+    else {
         return Err(AggregateError::NoDescriptor {
-            path: root.to_path_buf(),
+            path: describe.to_path_buf(),
         });
-    }
+    };
 
-    let source = fs::read_to_string(&descriptor_path).map_err(|error| AggregateError::Read {
-        path: descriptor_path.clone(),
-        error,
-    })?;
+    let descriptor_path = describe.join(DESCRIPTOR_FILENAME);
+
+    let source = descriptor_contents
+        .read_to_string()
+        .map_err(|error| AggregateError::Read {
+            path: descriptor_path.clone(),
+            error,
+        })?;
 
     let mut descriptor: Descriptor =
         serde_yaml_ng::from_str(&source).map_err(|error| AggregateError::Descriptor {
@@ -286,15 +474,12 @@ fn collect_component_version(
     let component = descriptor.name.clone();
     let version = descriptor.version();
 
-    let modules = root.join("modules");
+    for (path, contents) in files {
+        let Some(key) = classify(path, &component, &version) else {
+            continue;
+        };
 
-    for module in directories(&modules)? {
-        let name = module
-            .file_name()
-            .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_default();
-
-        collect_module(&module, &name, &component, &version, origin, root, catalog)?;
+        catalog.add(key, Arc::clone(origin), contents.clone(), path.clone())?;
     }
 
     // Navigation files are named by path rather than found by convention, so
@@ -303,11 +488,9 @@ fn collect_component_version(
     let mut nav = Vec::new();
 
     for entry in descriptor.nav.clone() {
-        let path = root.join(&entry);
-
-        if !path.is_file() {
+        let Some((_, contents)) = files.iter().find(|(path, _)| *path == entry) else {
             continue;
-        }
+        };
 
         let key = Key {
             component: component.clone(),
@@ -318,7 +501,13 @@ fn collect_component_version(
             relative: entry.clone(),
         };
 
-        catalog.add(key.clone(), Arc::clone(origin), path, entry.clone())?;
+        catalog.add(
+            key.clone(),
+            Arc::clone(origin),
+            contents.clone(),
+            entry.clone(),
+        )?;
+
         nav.push(key);
     }
 
@@ -331,6 +520,55 @@ fn collect_component_version(
     Ok(())
 }
 
+/// The file that turns a directory into a component version.
+const DESCRIPTOR_FILENAME: &str = "antora.yml";
+
+/// What resource a file within a start path is, if it is one.
+///
+/// The whole of the classification is in the path: `modules/<module>/<family
+/// directory>/<the rest>`. Anything that does not have that shape — a README
+/// beside the descriptor, a `.gitignore`, a directory nobody named — is not a
+/// resource and is left alone.
+fn classify(path: &str, component: &str, version: &str) -> Option<Key> {
+    let mut segments = path.split('/');
+
+    if segments.next()? != "modules" {
+        return None;
+    }
+
+    let module = segments.next()?;
+    let family = Family::from_directory(segments.next()?)?;
+    let relative: String = segments.collect::<Vec<&str>>().join("/");
+
+    if relative.is_empty() || is_hidden(&relative, family) {
+        return None;
+    }
+
+    // Only `AsciiDoc` becomes a page. A stray file under `pages/` is not a page
+    // with an unusual extension, it is something that was put in the wrong
+    // place, and publishing it at a page's URL would be the wrong kind of
+    // helpful.
+    //
+    // The comparison is case sensitive on purpose: a resource ID names a file
+    // exactly, so a `README.ADOC` that became a page here would be a page
+    // nothing could link to.
+    #[expect(
+        clippy::case_sensitive_file_extension_comparisons,
+        reason = "a resource ID names its file exactly; see above"
+    )]
+    if family == Family::Page && !relative.ends_with(".adoc") {
+        return None;
+    }
+
+    Some(Key {
+        component: component.to_string(),
+        version: version.to_string(),
+        module: module.to_string(),
+        family,
+        relative,
+    })
+}
+
 /// The module a descriptor-relative path belongs to.
 ///
 /// A navigation file is listed as `modules/<name>/nav.adoc`, and the module is
@@ -340,75 +578,6 @@ fn module_of(entry: &str) -> Option<String> {
     let mut segments = entry.split('/');
 
     (segments.next()? == "modules").then(|| segments.next().map(str::to_string))?
-}
-
-/// Collect one module's families.
-fn collect_module(
-    module_root: &Path,
-    module: &str,
-    component: &str,
-    version: &str,
-    origin: &Arc<Origin>,
-    component_root: &Path,
-    catalog: &mut Catalog,
-) -> Result<(), AggregateError> {
-    for family in [
-        Family::Page,
-        Family::Partial,
-        Family::Example,
-        Family::Image,
-        Family::Attachment,
-    ] {
-        let Some(directory) = family.directory() else {
-            continue;
-        };
-
-        let root = module_root.join(directory);
-
-        if !root.is_dir() {
-            continue;
-        }
-
-        for path in walk(&root)? {
-            let Some(relative) = relative_to(&root, &path) else {
-                continue;
-            };
-
-            if is_hidden(&relative, family) {
-                continue;
-            }
-
-            // Only `AsciiDoc` becomes a page. A stray file under `pages/` is
-            // not a page with an unusual extension, it is something that was
-            // put in the wrong place, and publishing it at a page's URL would
-            // be the wrong kind of helpful.
-            //
-            // The comparison is case sensitive on purpose: a resource ID names
-            // a file exactly, so a `README.ADOC` that became a page here would
-            // be a page nothing could link to.
-            #[expect(
-                clippy::case_sensitive_file_extension_comparisons,
-                reason = "a resource ID names its file exactly; see above"
-            )]
-            if family == Family::Page && !relative.ends_with(".adoc") {
-                continue;
-            }
-
-            let key = Key {
-                component: component.to_string(),
-                version: version.to_string(),
-                module: module.to_string(),
-                family,
-                relative,
-            };
-
-            let relative_src_path = relative_to(component_root, &path).unwrap_or_default();
-
-            catalog.add(key, Arc::clone(origin), path, relative_src_path)?;
-        }
-    }
-
-    Ok(())
 }
 
 /// Whether a file is kept out of its family.
@@ -456,27 +625,6 @@ fn walk(root: &Path) -> Result<Vec<PathBuf>, AggregateError> {
     Ok(files)
 }
 
-/// The directories directly under `root`, in sorted order. An absent `root` has
-/// none, which is not an error: a component may have no modules yet.
-fn directories(root: &Path) -> Result<Vec<PathBuf>, AggregateError> {
-    if !root.is_dir() {
-        return Ok(Vec::new());
-    }
-
-    let mut directories: Vec<PathBuf> = read_dir(root)?
-        .map(|entry| entry.path())
-        .filter(|path| path.is_dir())
-        .filter(|path| {
-            path.file_name()
-                .is_none_or(|name| !name.to_string_lossy().starts_with('.'))
-        })
-        .collect();
-
-    directories.sort();
-
-    Ok(directories)
-}
-
 /// Read a directory, naming it in the error if that fails.
 fn read_dir(path: &Path) -> Result<impl Iterator<Item = fs::DirEntry>, AggregateError> {
     let entries = fs::read_dir(path).map_err(|error| AggregateError::Read {
@@ -498,83 +646,6 @@ fn relative_to(root: &Path, path: &Path) -> Option<String> {
         .join("/");
 
     (!joined.is_empty()).then_some(joined)
-}
-
-/// What a worktree can say about itself without a git library.
-///
-/// Only two things are needed — the branch a worktree is on, and the remote it
-/// came from — and both are plain text in `.git`. Reading them directly keeps a
-/// git implementation out of the build until there is a reason for one, which
-/// is fetching refs rather than describing the current checkout.
-#[derive(Clone, Debug)]
-struct Repository {
-    /// The worktree root, which is the directory `.git` sits in.
-    root: PathBuf,
-
-    /// The checked-out branch, or `HEAD` when it cannot be determined.
-    refname: String,
-
-    /// The `origin` remote's URL, if there is one.
-    remote: Option<String>,
-}
-
-impl Repository {
-    /// Find the repository `start` is inside, falling back to `start` itself.
-    fn discover(start: &Path) -> Self {
-        let absolute = start.canonicalize().unwrap_or_else(|_| start.to_path_buf());
-
-        let root = absolute
-            .ancestors()
-            .find(|directory| directory.join(".git").exists())
-            .unwrap_or(&absolute)
-            .to_path_buf();
-
-        let git = root.join(".git");
-
-        Self {
-            refname: head(&git).unwrap_or_else(|| "HEAD".to_string()),
-            remote: remote(&git),
-            root,
-        }
-    }
-}
-
-/// The branch name in `.git/HEAD`, or `None` for a detached HEAD.
-fn head(git: &Path) -> Option<String> {
-    let head = fs::read_to_string(git.join("HEAD")).ok()?;
-
-    Some(head.trim().strip_prefix("ref: refs/heads/")?.to_string())
-}
-
-/// The `origin` remote's URL from `.git/config`.
-///
-/// This reads the INI file rather than shelling out to git, which keeps the
-/// build from depending on a git binary being installed for something this
-/// small.
-fn remote(git: &Path) -> Option<String> {
-    let config = fs::read_to_string(git.join("config")).ok()?;
-    let mut in_origin = false;
-
-    for line in config.lines() {
-        let line = line.trim();
-
-        if line.starts_with('[') {
-            in_origin = line.starts_with("[remote \"origin\"]");
-            continue;
-        }
-
-        if !in_origin {
-            continue;
-        }
-
-        if let Some((key, value)) = line.split_once('=')
-            && key.trim() == "url"
-        {
-            return Some(value.trim().to_string());
-        }
-    }
-
-    None
 }
 
 #[cfg(test)]

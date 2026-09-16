@@ -204,10 +204,14 @@ impl IncludeFileHandler for Resolver {
             return IncludeResolution::NotFound;
         };
 
-        match std::fs::read(&file.path) {
+        match file.contents.read() {
             Ok(bytes) => match String::from_utf8(bytes) {
                 Ok(content) => {
-                    self.read.borrow_mut().push(file.path.clone());
+                    // Only a file on disk can be watched; a blob read out of a
+                    // ref cannot change without the ref changing.
+                    if let Some(path) = file.contents.path() {
+                        self.read.borrow_mut().push(path.to_path_buf());
+                    }
 
                     // Remembered under the name the parser will hand back when
                     // this file's own directives are resolved.

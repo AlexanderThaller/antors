@@ -113,7 +113,7 @@ pub fn build(catalog: &Arc<Catalog>, component_version: &ComponentVersion) -> Ve
 /// Read one navigation file.
 fn read(catalog: &Arc<Catalog>, key: &Key) -> Option<Item> {
     let file = catalog.get(key)?;
-    let source = std::fs::read_to_string(&file.path).ok()?;
+    let source = file.contents.read_to_string().ok()?;
 
     // One resolver, in all three roles: the parser holds it as a path
     // resolver, and the resolution pass below uses the same object to resolve
