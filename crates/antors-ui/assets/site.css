@@ -745,6 +745,62 @@ body.-toc .toc.sidebar {
 .doc h5 { font-size: 1rem; }
 .doc h6 { font-size: 0.9375rem; color: var(--color-muted); }
 
+/* ---- what a document says about itself ---------------------------------- */
+
+.doc > .details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  margin: -0.75rem 0 1.75rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.875rem;
+  color: var(--color-muted);
+}
+
+.doc > .details .detail {
+  display: contents;
+}
+
+.doc > .details .label {
+  font-weight: 600;
+  color: var(--color-faint);
+  white-space: nowrap;
+}
+
+.doc > .details .value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.doc .tag {
+  display: inline-block;
+  padding: 0.05em 0.5em;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: var(--color-sunken);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.doc a .tag {
+  color: var(--color-link);
+  border-color: var(--color-link);
+}
+
+.doc a:hover .tag {
+  background: var(--color-accent-soft);
+  text-decoration: none;
+}
+
+.doc a:has(.tag):hover {
+  text-decoration: none;
+}
+
 .doc .subtitle {
   display: block;
   font-size: 0.6em;

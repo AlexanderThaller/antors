@@ -41,7 +41,9 @@ PY
 
 # Normalize the differences that are known and not bugs.
 normalize() {
-  sed \
+  # The details block is this project's own: a document's author, revision,
+  # status and tags shown under its title. Antora renders none of it.
+  perl -0pe 's{<div class="details">.*?</div>\n</div>\n}{}s' | sed \
     -e 's|<a href="\([^"]*\)" class="\([^"]*\)">|<a class="\2" href="\1">|g' \
     -e 's|<pre tabindex="0">|<pre>|g' \
     -e 's|<i class="fa icon-[a-z]*" title="[A-Za-z]*"></i>|ADMONITION-ICON|' \
@@ -58,10 +60,14 @@ normalize() {
 
 status=0
 
+# Pages this build generates and Antora does not. They are compared by the
+# integration tests instead; here they would only ever read as a difference.
+generated='/tags\.html$'
+
 echo "==> file tree"
 if diff \
   <(cd "$antora_out" && find . -type f | grep -v '^\./_/' | sort) \
-  <(cd "$antors_out" && find . -type f | grep -v '^\./_/' | sort)
+  <(cd "$antors_out" && find . -type f | grep -v '^\./_/' | grep -Ev "$generated" | sort)
 then
   echo "    identical"
 else
@@ -70,6 +76,8 @@ fi
 
 echo "==> article bodies"
 for page in $(cd "$antora_out" && find . -name '*.html' -not -name 404.html | sort); do
+  case "$page" in *tags.html) continue ;; esac
+
   a="$(article "$antora_out/$page" | normalize)"
   b="$(article "$antors_out/$page" | normalize)"
 

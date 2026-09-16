@@ -30,6 +30,8 @@ here re-implements AsciiDoc; what it adds is Antora's model on top of it.
 | Page shell | navbar, navigation sidebar, breadcrumbs, version selector, outline, pagination, edit link |
 | Output | `page-aliases` redirects, site start page, `404.html`, `robots.txt`, sitemaps |
 | Diagrams | a `[mermaid]` block is drawn while the site is built, so no library is loaded in the browser |
+| Metadata | a document's author, revision, status and tags are shown under its title — see [Beyond Antora](#beyond-antora) |
+| Tags | `:page-tags:` gathers into a generated `tags.adoc` per component version |
 | Serving | `antors serve` rebuilds and reloads the open page as sources change |
 
 ### What does not, yet
@@ -86,6 +88,7 @@ antors --strict                   # fail the build on a warning
 | `--no-mermaid` | Show mermaid diagrams as the listings they were written as. |
 | `--no-math` | Show equations as the notation they were written in. |
 | `--no-icons` | Mark admonitions with their label instead of an icon. |
+| `--no-tags-page` | Do not generate the page that gathers every `:page-tags:` entry. |
 
 ### serve
 
@@ -99,6 +102,57 @@ Every page is served with a small script that waits — without polling — for 
 next rebuild and then reloads. The script is added as the page is *served*, so
 the site on disk is the same whether it was built to be served or to be
 published.
+
+## Beyond Antora
+
+Two things here are deliberately not what Antora does.
+
+### What a document says about itself
+
+A header carries two sorts of thing, and only one is for the reader.
+`:sectnums:` is an instruction to the renderer; an author, a revision, a status
+and a set of tags are *about the document*, and someone opening a design note
+wants to know when it was written and whether it still stands. So a page like
+
+```asciidoc
+= Kubernetes Operator
+Alexander Thaller <alexander@thaller.ws>
+v1.0, 2026-09-10
+:status: living document
+:page-tags: kubernetes, operator
+```
+
+is shown with those facts under its title, labelled. Which attributes count as
+facts is [`adocers-render-core`]'s answer rather than one of this project's, so
+a page here and a PDF of the same document say the same things under the same
+labels.
+
+Antora's own `page-` attributes are instructions rather than facts —
+`page-role`, `page-aliases`, `page-toclevels`, `page-edit-url`, `page-partial`,
+`page-layout`, and the `page-component-*` family the build sets itself — and are
+left out. Everything else in the namespace is the author's own and is shown.
+
+[`adocers-render-core`]: https://crates.io/crates/adocers-render-core
+
+### The tags page
+
+A component version whose pages carry `:page-tags:` gets a `tags.adoc`,
+generated *before* anything renders — so it is a page like any other. It can be
+cross-referenced, listed in a navigation file, and read with an outline beside
+it, and its entries are real cross-references, so a tagged page that is deleted
+becomes a reported broken reference rather than a dead link. Each tag on a page
+links to its section.
+
+A `tags.adoc` that already exists is treated as the introduction and the list is
+added below it, so a placeholder page — the shape an Antora extension needs —
+keeps working with nothing removed.
+
+Spellings of one tag are one tag: `Session Store`, `session-store` and
+`session store` share a section, titled with whichever spelling is most used. An
+index split three ways, each showing a third of the pages and none of them
+saying so, would be worse than no index.
+
+`--no-tags-page` leaves it out.
 
 ## How it fits together
 

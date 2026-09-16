@@ -19,6 +19,9 @@ pub struct Page {
     /// The page title, shown as the `h1` and in the browser's tab.
     pub title: Option<String>,
 
+    /// The facts the document states about itself, shown under the title.
+    pub details: Vec<Detail>,
+
     /// `:description:`, for the page's `<meta>` and for a search result.
     pub description: Option<String>,
 
@@ -207,6 +210,30 @@ pub struct TocEntry {
 
     /// The headings beneath it.
     pub children: Vec<TocEntry>,
+}
+
+/// One labelled fact shown under a page's title.
+#[derive(Clone, Debug)]
+pub struct Detail {
+    /// What the reader sees in front of it.
+    pub label: String,
+
+    /// Its values, already relativized where they are links.
+    pub values: Vec<DetailValue>,
+
+    /// Whether the values are separate things rather than one sentence.
+    pub is_list: bool,
+}
+
+/// One value of a labelled fact.
+#[derive(Clone, Debug)]
+pub struct DetailValue {
+    /// The text.
+    pub text: String,
+
+    /// Where it points, for a value that is worth following — a tag leads to
+    /// the overview of everything carrying it.
+    pub href: Option<String>,
 }
 
 /// A link with text.

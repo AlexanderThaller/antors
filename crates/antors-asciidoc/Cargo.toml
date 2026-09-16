@@ -11,6 +11,7 @@ categories = ["text-processing"]
 
 [dependencies]
 adocers-html.workspace = true
+adocers-render-core.workspace = true
 antors-content.workspace = true
 antors-model.workspace = true
 asciidoc-parser.workspace = true

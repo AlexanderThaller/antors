@@ -37,6 +37,7 @@ fn build(name: &str) -> (PathBuf, Report) {
         Options {
             render: antors_site::build::RenderOptions::default(),
             clean: true,
+            tags_page: true,
         },
     )
     .run()
@@ -349,6 +350,117 @@ fn the_breadcrumbs_follow_the_navigation_rather_than_the_directories() {
 }
 
 #[test]
+fn a_document_states_its_facts_under_its_title() {
+    let (out, _) = build("details");
+    let html = page(&out, "showcase/2.0/metadata.html");
+
+    let details = html
+        .split("<div class=\"details\">")
+        .nth(1)
+        .and_then(|block| block.split("</div>\n</div>").next())
+        .expect("the page has a details block");
+
+    // The author line, the revision line, and the header attributes that are
+    // facts rather than instructions.
+    assert!(details.contains(r#"<span class="label">Author:</span>"#));
+    assert!(details.contains(r#"href="mailto:alexander@thaller.ws">Alexander Thaller</a>"#));
+    assert!(details.contains(r#"<span class="label">Version:</span>"#));
+    assert!(details.contains("1.0"));
+    assert!(details.contains(r#"<span class="label">Date:</span>"#));
+    assert!(details.contains("2026-09-10"));
+    assert!(details.contains(r#"<span class="label">Status:</span>"#));
+    assert!(details.contains("living document"));
+
+    // Each tag is its own mark, and leads to the overview of everything
+    // carrying it.
+    assert!(details.contains(r#"href="tags.html#tag-asciidoc"><span class="tag">asciidoc</span>"#));
+    assert!(details.contains(r#"<span class="tag">rendering</span>"#));
+    assert!(details.contains(r#"<span class="tag">showcase</span>"#));
+}
+
+#[test]
+fn antoras_own_page_attributes_are_not_shown_as_facts() {
+    let (out, _) = build("no-directives");
+
+    // This page sets `page-role`, `page-toclevels`, `page-edit-url` and
+    // `page-tags`. Only the last is something a reader wants to read.
+    let html = page(&out, "showcase/2.0/page-attributes.html");
+
+    let details = html
+        .split("<div class=\"details\">")
+        .nth(1)
+        .and_then(|block| block.split("</div>\n</div>").next())
+        .expect("the page has a details block");
+
+    assert!(details.contains(r#"<span class="label">Tags:</span>"#));
+
+    for absent in ["Role:", "Toclevels:", "Edit url:", "Component name:"] {
+        assert!(!details.contains(absent), "`{absent}` should not be shown");
+    }
+}
+
+#[test]
+fn a_tagged_component_version_gets_a_tags_page() {
+    let (out, _) = build("tags");
+    let html = page(&out, "showcase/2.0/tags.html");
+
+    // It is a page like any other: it went through the whole pipeline, so it
+    // has a title, a shell, an outline and working cross-references.
+    assert!(html.contains(r#"<h1 class="page">Tags</h1>"#));
+    assert!(html.contains(r#"<aside class="toc sidebar""#));
+    assert!(html.contains(r#"<nav class="breadcrumbs""#));
+
+    // A section per tag, anchored so a tag on a page can link straight to it.
+    assert!(html.contains(r#"id="tag-asciidoc""#));
+    assert!(html.contains(r#"id="tag-showcase""#));
+
+    // Its entries are real cross-references: resolved, and named after the
+    // pages they point at.
+    assert!(html.contains(r#"href="metadata.html">Document metadata</a>"#));
+    assert!(html.contains(r#"href="guide/getting-started.html">Getting started</a>"#));
+}
+
+#[test]
+fn a_component_version_with_no_tags_gets_no_tags_page() {
+    let (out, _) = build("no-tags");
+
+    // Nothing in 1.0 or in `sidecar` is tagged, and a link to an empty
+    // overview is worse than no link.
+    assert!(!out.join("showcase/1.0/tags.html").exists());
+    assert!(!out.join("sidecar/tags.html").exists());
+}
+
+#[test]
+fn the_tags_page_can_be_switched_off() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut playbook = Playbook::load(&root.join("resources/showcase/antora-playbook.yml"))
+        .expect("the showcase playbook loads");
+
+    let out = root.join("target/tests/tags-off");
+    playbook.output.dir.clone_from(&out);
+
+    Build::new(
+        playbook,
+        Options {
+            render: antors_site::build::RenderOptions::default(),
+            clean: true,
+            tags_page: false,
+        },
+    )
+    .run()
+    .expect("the showcase builds");
+
+    assert!(!out.join("showcase/2.0/tags.html").exists());
+
+    // The tags themselves are still shown; they simply lead nowhere.
+    let html = std::fs::read_to_string(out.join("showcase/2.0/metadata.html"))
+        .expect("the page was written");
+
+    assert!(html.contains(r#"<span class="tag">asciidoc</span>"#));
+    assert!(!html.contains("tags.html"));
+}
+
+#[test]
 fn a_clean_showcase_reports_nothing_about_its_content() {
     let (_, report) = build("report");
 
@@ -363,7 +475,7 @@ fn a_clean_showcase_reports_nothing_about_its_content() {
         "the showcase should build without complaint, but: {content:#?}"
     );
 
-    assert_eq!(report.pages, 17);
+    assert_eq!(report.pages, 19);
 }
 
 #[test]

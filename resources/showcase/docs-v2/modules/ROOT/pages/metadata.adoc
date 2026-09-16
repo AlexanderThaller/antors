@@ -1,0 +1,59 @@
+= Document metadata
+Alexander Thaller <alexander@thaller.ws>
+v1.0, 2026-09-10
+:navtitle: Metadata
+:status: living document
+:page-tags: asciidoc, rendering, showcase
+:description: What a document can say about itself, and where it is shown.
+
+A document header carries two sorts of thing, and only one of them is for the
+reader. `:sectnums:` is an instruction to the renderer; an author, a revision, a
+status and a set of tags are *about the document*, and are shown under its
+title:
+
+[listing]
+----
+= Document metadata
+Alexander Thaller <alexander@thaller.ws>
+v1.0, 2026-09-10
+:status: living document
+:page-tags: asciidoc, rendering, showcase
+----
+
+== What is shown
+
+[cols="1,2", options="header"]
+|===
+| Written | Shown as
+
+| The author line
+| `Author`, with the address as a `mailto:` link
+
+| `v1.0, 2026-09-10`
+| `Version` and `Date`
+
+| `:status:`
+| `Status`
+
+| `:page-tags:`
+| `Tags`, each linking to its section of the generated tags page
+|===
+
+== What is not
+
+Antora's own `page-` attributes say what the build should do rather than what
+the document is, so they are left out: `page-role`, `page-aliases`,
+`page-toclevels`, `page-edit-url`, `page-partial`, `page-layout`, and the
+`page-component-*` family the build sets itself.
+
+Everything else in the namespace is the author's own, and is shown.
+
+== The tags page
+
+A component version whose pages carry `page-tags` gets a `tags.adoc` of its own,
+generated before anything renders — so it is a page like any other: it can be
+cross-referenced, listed in a navigation file, and read with an outline beside
+it. `--no-tags-page` leaves it out.
+
+This page is not listed in the navigation, because the showcase is also built by
+Antora and Antora does not generate it. The tags above lead to it.

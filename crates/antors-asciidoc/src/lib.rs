@@ -27,6 +27,7 @@
 #![warn(clippy::print_stderr, clippy::print_stdout)]
 
 pub mod attributes;
+pub mod details;
 pub mod include;
 pub mod links;
 pub mod nav;
@@ -35,6 +36,10 @@ mod render;
 
 pub use crate::{
     attributes::Attributes,
+    details::{
+        Detail,
+        DetailValue,
+    },
     render::{
         Header,
         Options,

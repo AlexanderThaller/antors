@@ -63,6 +63,10 @@ pub struct Options {
     /// The playbook's `output.clean` says this too; this is the command line's
     /// way to say it for one run.
     pub clean: bool,
+
+    /// Whether a component version whose pages carry `:page-tags:` gets a page
+    /// gathering them.
+    pub tags_page: bool,
 }
 
 /// Why a build could not run.
@@ -206,6 +210,11 @@ impl Build {
 
     /// Learn what every page is called, and record the IDs they also answer
     /// to.
+    ///
+    /// The tags overview is generated here rather than after: it is a page like
+    /// any other, and everything downstream — resolving a reference to it,
+    /// listing it in a navigation file, giving it a place in the pagination —
+    /// needs it in the catalog before the render pass begins.
     fn name_pages(&self, catalog: Catalog, report: &mut Report) -> Catalog {
         let shared = Arc::new(catalog.clone());
         let renderer = self.renderer(&shared);
@@ -223,13 +232,26 @@ impl Build {
         drop(shared);
 
         let mut catalog = catalog;
+        let mut tagged = Vec::new();
 
         for (key, header) in named {
+            if !header.tags.is_empty() {
+                tagged.push(crate::tags::Tagged {
+                    key: key.clone(),
+                    title: header.title.clone(),
+                    tags: header.tags,
+                });
+            }
+
             catalog.set_page_titles(&key, header.title, header.nav_title);
 
             for alias in header.aliases {
                 Self::add_alias(&mut catalog, &key, &alias, report);
             }
+        }
+
+        if self.options.tags_page {
+            crate::tags::generate(&mut catalog, &tagged, report);
         }
 
         catalog

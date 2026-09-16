@@ -46,6 +46,7 @@ fn run() -> Result<ExitCode> {
                 Options {
                     render: args.render_options(),
                     clean: args.clean,
+                    tags_page: !args.no_tags_page,
                 },
                 &serve::Config {
                     address: serve.bind,
@@ -71,6 +72,7 @@ fn build(path: &std::path::Path, args: &cli::BuildArgs) -> Result<ExitCode> {
         Options {
             render: args.render_options(),
             clean: args.clean,
+            tags_page: !args.no_tags_page,
         },
     )
     .run()?;

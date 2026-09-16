@@ -141,6 +141,7 @@ pub(crate) fn article(page: &Page) -> String {
         let _ = writeln!(out, "<h1 class=\"page\">{title}</h1>");
     }
 
+    out.push_str(&details(page));
     out.push_str(&page.content);
 
     if !out.ends_with('\n') {
@@ -149,6 +150,60 @@ pub(crate) fn article(page: &Page) -> String {
 
     out.push_str(&pagination(page));
     out.push_str("</article>\n");
+
+    out
+}
+
+/// What the document says about itself, shown between the title and the text.
+///
+/// The class names are the ones
+/// [`adocers-html`](https://crates.io/crates/adocers-html) uses for the same
+/// block in a standalone page, so a stylesheet written for one styles the
+/// other.
+fn details(page: &Page) -> String {
+    if page.details.is_empty() {
+        return String::new();
+    }
+
+    let mut out = String::from("<div class=\"details\">\n");
+
+    for detail in &page.details {
+        let values: Vec<String> = detail
+            .values
+            .iter()
+            .map(|value| {
+                let text = text(&value.text);
+
+                // A list's entries are separate things, so each is its own
+                // mark rather than a run of words with commas between them.
+                let inner = if detail.is_list {
+                    format!("<span class=\"tag\">{text}</span>")
+                } else {
+                    text
+                };
+
+                match &value.href {
+                    Some(href) => format!("<a href=\"{}\">{inner}</a>", attr(href)),
+                    None => inner,
+                }
+            })
+            .collect();
+
+        let separator = if detail.is_list { " " } else { ", " };
+
+        // The values are wrapped rather than left loose beside the label: the
+        // two are laid out as a pair of columns, and a list long enough to
+        // wrap would otherwise put its second line under the *label*.
+        let _ = writeln!(
+            out,
+            "<div class=\"detail\"><span class=\"label\">{}:</span> <span \
+             class=\"value\">{}</span></div>",
+            text(&detail.label),
+            values.join(separator),
+        );
+    }
+
+    out.push_str("</div>\n");
 
     out
 }

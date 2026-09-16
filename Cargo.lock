@@ -152,6 +152,7 @@ name = "antors-asciidoc"
 version = "0.1.0"
 dependencies = [
  "adocers-html",
+ "adocers-render-core",
  "antors-content",
  "antors-model",
  "asciidoc-parser",

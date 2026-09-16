@@ -15,7 +15,9 @@ use antors_content::{
     SourceFile,
 };
 use antors_model::{
+    Family,
     playbook::Playbook,
+    resource::Key,
     url::relativize,
 };
 use antors_ui::model as ui;
@@ -55,6 +57,7 @@ pub(crate) fn model(
         site: site(playbook, catalog, &url),
         content: rendered.html.clone(),
         title: rendered.title.clone(),
+        details: details(catalog, page, &url, &rendered.details),
         description: rendered.description.clone(),
         keywords: rendered.keywords.clone(),
         canonical_url: canonical(playbook, &url),
@@ -93,6 +96,56 @@ pub(crate) fn model(
         root_path,
         url,
     }
+}
+
+/// The facts a page states about itself, with its tags pointing at the
+/// overview.
+///
+/// A tag is only worth showing if it leads somewhere: the point of tagging a
+/// design note `clickhouse` is to find the others. So each tag links to its
+/// section of the component version's tags page — when there is one, which
+/// there is not if nothing was tagged or the build was told not to make one.
+fn details(
+    catalog: &Catalog,
+    page: &SourceFile,
+    url: &str,
+    details: &[antors_asciidoc::Detail],
+) -> Vec<ui::Detail> {
+    let overview = catalog
+        .get(&Key {
+            component: page.key.component.clone(),
+            version: page.key.version.clone(),
+            module: antors_model::resource::ROOT_MODULE.to_string(),
+            family: Family::Page,
+            relative: crate::tags::FILENAME.to_string(),
+        })
+        .and_then(SourceFile::url)
+        .map(|overview| relativize(url, overview));
+
+    details
+        .iter()
+        .map(|detail| ui::Detail {
+            label: detail.label.clone(),
+            is_list: detail.is_list,
+            values: detail
+                .values
+                .iter()
+                .map(|value| ui::DetailValue {
+                    text: value.text.clone(),
+
+                    href: match (&value.mailto, detail.name.as_str()) {
+                        (Some(address), _) => Some(format!("mailto:{address}")),
+
+                        (None, "tags") => overview.as_ref().map(|overview| {
+                            format!("{overview}#{}", crate::tags::anchor(&value.text))
+                        }),
+
+                        _ => None,
+                    },
+                })
+                .collect(),
+        })
+        .collect()
 }
 
 /// What the whole site is called, written from this page.
@@ -146,7 +199,7 @@ fn resolve_start_page(catalog: &Catalog, spec: &str) -> Option<String> {
             version: String::new(),
             module: antors_model::resource::ROOT_MODULE.to_string(),
         },
-        antors_model::Family::Page,
+        Family::Page,
     );
 
     catalog

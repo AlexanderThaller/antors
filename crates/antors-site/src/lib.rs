@@ -29,6 +29,7 @@ pub mod report;
 
 mod page;
 mod sitemap;
+mod tags;
 mod write;
 
 pub use crate::{

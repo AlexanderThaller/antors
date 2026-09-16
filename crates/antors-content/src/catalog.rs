@@ -270,6 +270,17 @@ impl Catalog {
         }
     }
 
+    /// Replace a file's contents, leaving everything else about it alone.
+    ///
+    /// This is how generated content reaches a page an author already wrote —
+    /// the page keeps its origin, its edit link and its place in the site, and
+    /// only what it says changes.
+    pub fn set_contents(&mut self, key: &Key, contents: Contents) {
+        if let Some(file) = self.files.get_mut(key) {
+            file.contents = contents;
+        }
+    }
+
     /// Record what a page turned out to be called.
     pub fn set_page_titles(&mut self, key: &Key, title: Option<String>, nav_title: Option<String>) {
         if let Some(file) = self.files.get_mut(key) {

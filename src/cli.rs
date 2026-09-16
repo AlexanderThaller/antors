@@ -95,6 +95,10 @@ pub(crate) struct BuildArgs {
     #[arg(long)]
     pub(crate) no_icons: bool,
 
+    /// Do not generate the page that gathers every `:page-tags:` entry.
+    #[arg(long)]
+    pub(crate) no_tags_page: bool,
+
     /// Say nothing unless something went wrong.
     #[arg(short, long)]
     pub(crate) quiet: bool,

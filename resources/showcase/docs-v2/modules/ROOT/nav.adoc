@@ -10,3 +10,4 @@
 ** xref:includes.adoc[Includes]
 ** xref:media.adoc[Images and attachments]
 ** xref:page-attributes.adoc[Page attributes]
+** xref:metadata.adoc[Document metadata]

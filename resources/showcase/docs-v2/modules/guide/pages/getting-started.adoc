@@ -1,5 +1,6 @@
 = Getting started
 :navtitle: Getting started
+:page-tags: showcase, guide
 
 This page lives in the `guide` module, which is why its URL has `/guide/` in it.
 

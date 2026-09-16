@@ -31,6 +31,10 @@ use asciidoc_parser::{
 
 use crate::{
     attributes::Attributes,
+    details::{
+        self,
+        Detail,
+    },
     include,
     links::{
         Links,
@@ -94,6 +98,13 @@ pub struct Header {
 
     /// The resource IDs this page also answers to, from `:page-aliases:`.
     pub aliases: Vec<String>,
+
+    /// What the page tagged itself with, from `:page-tags:`.
+    ///
+    /// Collected in the first pass because the tags overview is a page like any
+    /// other and has to exist before anything renders — including before
+    /// anything resolves a reference to it.
+    pub tags: Vec<String>,
 }
 
 /// A rendered page.
@@ -104,6 +115,10 @@ pub struct Rendered {
 
     /// The document title.
     pub title: Option<String>,
+
+    /// The facts the document states about itself, for the shell to show under
+    /// the title.
+    pub details: Vec<Detail>,
 
     /// Every `page-*` attribute the page ended up with, for the templates.
     pub page_attributes: BTreeMap<String, String>,
@@ -228,6 +243,12 @@ impl Renderer {
                         .collect()
                 })
                 .unwrap_or_default(),
+
+            tags: details::of(&document)
+                .into_iter()
+                .find(|detail| detail.name == "tags")
+                .map(|detail| detail.values.into_iter().map(|value| value.text).collect())
+                .unwrap_or_default(),
         }
     }
 
@@ -306,6 +327,7 @@ impl Renderer {
         Ok(Rendered {
             html,
             title: document.doctitle().map(str::to_string),
+            details: details::of(&document),
             page_attributes: page_attributes(&document),
             description: attribute(&document, "description"),
             keywords: attribute(&document, "keywords"),

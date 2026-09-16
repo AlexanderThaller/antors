@@ -109,53 +109,82 @@
 
   var tocLinks = Array.prototype.slice.call(doc.querySelectorAll('.toc-menu a[href^="#"]'))
 
-  if (tocLinks.length && 'IntersectionObserver' in window) {
-    var byId = {}
+  if (tocLinks.length) {
+    var headings = []
 
-    var targets = tocLinks
-      .map(function (link) {
-        var target = doc.getElementById(decodeURIComponent(link.hash.slice(1)))
-        if (target) byId[target.id] = link
-        return target
-      })
-      .filter(Boolean)
-
-    // A heading counts as "the one being read" once it has passed under the
-    // toolbar. Tracking the topmost such heading — rather than whichever
-    // crossed the line last — keeps the marker steady when scrolling up.
-    var visible = {}
-
-    var observer = new IntersectionObserver(
-      function (entries) {
-        entries.forEach(function (entry) {
-          visible[entry.target.id] = entry.isIntersecting
-        })
-
-        var current = null
-
-        for (var index = 0; index < targets.length; index++) {
-          var id = targets[index].id
-
-          if (visible[id]) {
-            current = id
-            break
-          }
-
-          if (targets[index].getBoundingClientRect().top < 0) current = id
-        }
-
-        tocLinks.forEach(function (link) {
-          link.classList.remove('is-active')
-        })
-
-        if (current && byId[current]) byId[current].classList.add('is-active')
-      },
-      { rootMargin: '-96px 0px -70% 0px', threshold: 0 }
-    )
-
-    targets.forEach(function (target) {
-      observer.observe(target)
+    tocLinks.forEach(function (link) {
+      var target = doc.getElementById(decodeURIComponent(link.hash.slice(1)))
+      if (target) headings.push({ element: target, link: link })
     })
+
+    // The entry to mark is the *last* heading the reader has scrolled past —
+    // which only ever moves one way as the page moves one way. Marking whichever
+    // heading is currently on screen instead looks right until a section title
+    // and its first subsection title arrive together, and then the mark jumps
+    // up a level and back down again as they pass.
+    var active = null
+
+    function readingLine () {
+      var toolbar = doc.querySelector('.toolbar')
+      return toolbar ? toolbar.getBoundingClientRect().bottom + 8 : 96
+    }
+
+    function update () {
+      if (!headings.length) return
+
+      var line = readingLine()
+      var current = headings[0]
+
+      for (var index = 0; index < headings.length; index++) {
+        if (headings[index].element.getBoundingClientRect().top > line) break
+        current = headings[index]
+      }
+
+      // The last section of a page may be too short to ever reach the line, so
+      // it would be unreachable without this.
+      var atBottom =
+        window.innerHeight + window.scrollY >= doc.documentElement.scrollHeight - 2
+
+      if (atBottom) current = headings[headings.length - 1]
+
+      if (current === active) return
+      active = current
+
+      tocLinks.forEach(function (link) {
+        link.classList.remove('is-active')
+      })
+
+      current.link.classList.add('is-active')
+
+      // A long outline scrolls independently, so the marked entry has to be
+      // brought into its own view rather than the page's.
+      var menu = current.link.closest('.toc.sidebar')
+
+      if (menu && menu.scrollHeight > menu.clientHeight) {
+        var entry = current.link.getBoundingClientRect()
+        var frame = menu.getBoundingClientRect()
+
+        if (entry.top < frame.top || entry.bottom > frame.bottom) {
+          menu.scrollTop += entry.top - frame.top - frame.height / 3
+        }
+      }
+    }
+
+    var pending = false
+
+    function schedule () {
+      if (pending) return
+      pending = true
+
+      window.requestAnimationFrame(function () {
+        pending = false
+        update()
+      })
+    }
+
+    on(window, 'scroll', schedule)
+    on(window, 'resize', schedule)
+    update()
   }
 
   // --- copying a listing ------------------------------------------------------
