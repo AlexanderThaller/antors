@@ -1,0 +1,33 @@
+= Diagrams and callouts
+:navtitle: Diagrams
+
+A mermaid diagram, drawn while the site is built:
+
+[mermaid]
+----
+flowchart TB
+    subgraph ingress["Ingress"]
+        GW["Gateway web-gw"]
+    end
+    GW --> App["App"]
+    App --> DB[("Store")]
+----
+
+And a listing with callouts:
+
+[source,rust]
+----
+use std::fs;
+
+fn read(path: &str) -> std::io::Result<String> { // <1>
+    fs::read_to_string(path) // <2>
+}
+----
+<1> The signature returns a `Result`, so the caller decides what a failure means.
+<2> The body is one call; everything else is the type.
+
+NOTE: A note, to see the icon centred against the box.
+
+WARNING: A longer admonition, with enough text in it that the block grows past a
+single line and the icon beside it has somewhere to be centred within. This is
+the case that used to strand the mark at the ceiling.

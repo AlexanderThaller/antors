@@ -400,6 +400,31 @@ fn antoras_own_page_attributes_are_not_shown_as_facts() {
 }
 
 #[test]
+fn a_mermaid_block_is_drawn_while_the_site_is_built() {
+    let (out, _) = build("mermaid");
+    let html = page(&out, "showcase/2.0/diagrams.html");
+
+    // Drawn, not deferred: the diagram is in the HTML that is served, so it
+    // needs no library in the browser and is there for a reader who prints the
+    // page.
+    assert!(html.contains(r#"<div class="imageblock diagram">"#));
+    assert!(html.contains("<svg"), "the diagram was not drawn");
+    assert!(!html.contains("mermaid.esm"), "no library should be loaded");
+
+    // Its theme is written against the stylesheet's custom properties, so a
+    // stylesheet that did not declare them would leave the nodes unpainted.
+    let css =
+        std::fs::read_to_string(out.join("_/css/site.css")).expect("the stylesheet was written");
+
+    for property in ["--code-bg", "--rule", "--fg", "--accent"] {
+        assert!(
+            css.contains(&format!("{property}:")),
+            "`{property}` is used by a drawn diagram and must be declared"
+        );
+    }
+}
+
+#[test]
 fn a_tagged_component_version_gets_a_tags_page() {
     let (out, _) = build("tags");
     let html = page(&out, "showcase/2.0/tags.html");
@@ -520,7 +545,7 @@ fn a_clean_showcase_reports_nothing_about_its_content() {
         "the showcase should build without complaint, but: {content:#?}"
     );
 
-    assert_eq!(report.pages, 19);
+    assert_eq!(report.pages, 20);
 }
 
 #[test]

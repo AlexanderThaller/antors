@@ -5,6 +5,7 @@
 ** xref:lists.adoc[Lists]
 ** xref:tables.adoc[Tables]
 ** xref:code.adoc[Source code]
+** xref:diagrams.adoc[Diagrams and callouts]
 * Antora
 ** xref:resource-ids.adoc[Resource IDs and xrefs]
 ** xref:includes.adoc[Includes]

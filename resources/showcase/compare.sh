@@ -18,7 +18,7 @@ antora_out="$here/build/antora"
 antors_out="$here/build/antors"
 
 echo "==> antora"
-(cd "$here" && npx --yes antora@3.2 --fetch --to-dir build/antora antora-playbook.yml)
+(cd "$here" && npx --yes antora@3.2 --fetch --clean --to-dir build/antora antora-playbook.yml)
 
 echo "==> antors"
 (cd "$root" && cargo run --release --quiet -- \
@@ -60,14 +60,22 @@ normalize() {
 
 status=0
 
-# Pages this build generates and Antora does not. They are compared by the
-# integration tests instead; here they would only ever read as a difference.
-generated='/tags\.html$'
+# Pages that exist only on one side, or that are deliberately rendered
+# differently. Both are covered by the integration tests instead; here they
+# would only ever read as a difference.
+#
+#   tags.html     antors generates it and Antora does not, so it is missing
+#                 from the tree on one side as well as from the comparison.
+#   diagrams.html both sides publish it; only its body differs, because a
+#                 `[mermaid]` block is drawn as an SVG here and left as the
+#                 listing it was written as by an Antora without the extension.
+only_ours='/tags\.html$'
+skip_body='/(tags|diagrams)\.html$'
 
 echo "==> file tree"
 if diff \
   <(cd "$antora_out" && find . -type f | grep -v '^\./_/' | sort) \
-  <(cd "$antors_out" && find . -type f | grep -v '^\./_/' | grep -Ev "$generated" | sort)
+  <(cd "$antors_out" && find . -type f | grep -v '^\./_/' | grep -Ev "$only_ours" | sort)
 then
   echo "    identical"
 else
@@ -76,7 +84,7 @@ fi
 
 echo "==> article bodies"
 for page in $(cd "$antora_out" && find . -name '*.html' -not -name 404.html | sort); do
-  case "$page" in *tags.html) continue ;; esac
+  if printf '%s' "$page" | grep -Eq "$skip_body"; then continue; fi
 
   a="$(article "$antora_out/$page" | normalize)"
   b="$(article "$antors_out/$page" | normalize)"

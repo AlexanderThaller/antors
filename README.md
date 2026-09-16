@@ -30,7 +30,7 @@ here re-implements AsciiDoc; what it adds is Antora's model on top of it.
 | Page shell | navbar, navigation sidebar, breadcrumbs, version selector, outline, pagination, edit link |
 | Output | `page-aliases` redirects, site start page, `404.html`, `robots.txt`, sitemaps |
 | Leftovers | a page in the output directory that this build did not write is reported — a site is written *over* the last one, and a page that moved leaves a copy at its old URL |
-| Diagrams | a `[mermaid]` block is drawn while the site is built, so no library is loaded in the browser |
+| Diagrams | a `[mermaid]` block is drawn while the site is built, so no library is loaded in the browser and it prints |
 | Metadata | a document's author, revision, status and tags are shown under its title — see [Beyond Antora](#beyond-antora) |
 | Tags | `:page-tags:` gathers into a generated `tags.adoc` per component version |
 | Serving | `antors serve` rebuilds and reloads the open page as sources change |
@@ -134,6 +134,22 @@ Antora's own `page-` attributes are instructions rather than facts —
 left out. Everything else in the namespace is the author's own and is shown.
 
 [`adocers-render-core`]: https://crates.io/crates/adocers-render-core
+
+### The stylesheet
+
+Everything inside `article.doc` is [`adocers-html`]'s own stylesheet, scoped.
+That is not politeness. The back end's markup is styled by those rules, and a
+mermaid diagram it draws carries theme overrides written against the custom
+properties they declare — a stylesheet that redefined the article in its own
+terms leaves `fill: var(--code-bg)` resolving to nothing, and a diagram of black
+boxes. Everything outside `.doc` is this project's own, because Antora has a
+navbar, a navigation tree, a toolbar and an outline and a standalone page does
+not.
+
+The one deliberate departure is the admonition, which is a bordered box with a
+coloured edge rather than Asciidoctor's icon column.
+
+[`adocers-html`]: https://crates.io/crates/adocers-html
 
 ### The tags page
 

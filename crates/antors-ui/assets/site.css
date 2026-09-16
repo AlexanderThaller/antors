@@ -1,39 +1,60 @@
 /* antors default UI.
  *
- * The layout and the class names are Antora's, so a reader who knows one site
- * knows this one; the colors and the type are this stylesheet's own. Everything
- * is driven by the custom properties at the top, which is where to start if you
- * want a site that looks like yours rather than like this.
+ * Two stylesheets meet here, and the seam is worth knowing about.
+ *
+ * Everything inside `.doc` — the article — is
+ * [`adocers-html`](https://crates.io/crates/adocers-html)'s stylesheet, scoped.
+ * That is not politeness: the back end's own markup is styled by those rules,
+ * and a mermaid diagram it draws carries theme overrides written against the
+ * custom properties they declare. A stylesheet that redefined the article in
+ * its own terms would leave `fill: var(--code-bg)` resolving to nothing, and a
+ * diagram of black boxes.
+ *
+ * Everything outside `.doc` — the navbar, the navigation, the toolbar, the
+ * outline, the footer — is this project's own, because Antora has those and a
+ * standalone page does not.
+ *
+ * The exception in both directions is the admonition, which is styled here as a
+ * bordered box with a coloured edge rather than as Asciidoctor's icon column.
  */
 
 :root {
-  --color-text: #232629;
-  --color-muted: #5b6168;
-  --color-faint: #8a9199;
-  --color-link: #1a62b8;
-  --color-link-hover: #12467f;
-  --color-background: #ffffff;
-  --color-sunken: #f5f6f7;
-  --color-border: #dfe2e5;
-  --color-border-strong: #c4c9ce;
+  color-scheme: light dark;
 
-  --color-navbar: #1c2430;
-  --color-navbar-text: #e8eaed;
-  --color-navbar-muted: #9aa4b1;
+  /* ---- adocers' palette, which the article and its diagrams are written
+     against. Renaming any of these breaks a drawing, not just a colour. ---- */
+  --bg: #fdfdfd;
+  --fg: #1c1e21;
+  --muted: #656d77;
+  --rule: #dcdfe4;
+  --accent: #1565a8;
+  --code-bg: #f5f6f8;
+  --sidebar-bg: #f2f4f7;
 
-  --color-accent: #1a62b8;
-  --color-accent-soft: #e8f0fb;
+  /* Asciidoctor's own admonition colours. */
+  --admon-note: #19407c;
+  --admon-tip: #b58900;
+  --admon-important: #bf6900;
+  --admon-caution: #bf3400;
+  --admon-warning: #bf0000;
 
-  --color-note: #1a62b8;
-  --color-tip: #16794a;
-  --color-important: #b3261e;
-  --color-caution: #8b5cf6;
-  --color-warning: #a35c00;
+  /* Syntax highlighting. */
+  --hl-comment: #656d77;
+  --hl-keyword: #cf222e;
+  --hl-string: #0a3069;
+  --hl-number: #0550ae;
+  --hl-function: #6639ba;
+  --hl-type: #953800;
+  --hl-constant: #0550ae;
+  --hl-property: #0550ae;
+  --hl-tag: #116329;
+  --hl-punctuation: #57606a;
 
-  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", "Menlo",
-    "Consolas", "Liberation Mono", monospace;
+  /* ---- the page shell, which is this project's own ---- */
+  --navbar-bg: #1c2430;
+  --navbar-fg: #e8eaed;
+  --navbar-muted: #9aa4b1;
+  --accent-soft: #e8f0fb;
 
   --navbar-height: 3.25rem;
   --toolbar-height: 2.75rem;
@@ -41,46 +62,45 @@
   --toc-width: 12.5rem;
   --doc-max-width: 46rem;
 
-  --radius: 4px;
+  --radius: 6px;
   --shadow: 0 2px 8px rgba(16, 22, 30, 0.12);
-
-  color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-text: #dfe3e8;
-    --color-muted: #9aa4b1;
-    --color-faint: #6b747f;
-    --color-link: #6aa9f0;
-    --color-link-hover: #96c4f7;
-    --color-background: #14181d;
-    --color-sunken: #1b2027;
-    --color-border: #2c333c;
-    --color-border-strong: #3c444f;
+    --bg: #16181c;
+    --fg: #dfe3e8;
+    --muted: #9aa3ad;
+    --rule: #2e3339;
+    --accent: #6cb2f0;
+    --code-bg: #1e2126;
+    --sidebar-bg: #1e2126;
 
-    --color-navbar: #0f1419;
-    --color-navbar-text: #e8eaed;
-    --color-navbar-muted: #8a939f;
+    /* Lightened, because Asciidoctor's are chosen against a white page. */
+    --admon-note: #6ea8e8;
+    --admon-tip: #e3b341;
+    --admon-important: #e08c3e;
+    --admon-caution: #f0764a;
+    --admon-warning: #f0716f;
 
-    --color-accent: #6aa9f0;
-    --color-accent-soft: #1b2733;
+    --hl-comment: #8b949e;
+    --hl-keyword: #ff7b72;
+    --hl-string: #a5d6ff;
+    --hl-number: #79c0ff;
+    --hl-function: #d2a8ff;
+    --hl-type: #ffa657;
+    --hl-constant: #79c0ff;
+    --hl-property: #79c0ff;
+    --hl-tag: #7ee787;
+    --hl-punctuation: #8b949e;
 
-    --color-note: #6aa9f0;
-    --color-tip: #4ec08a;
-    --color-important: #f2736a;
-    --color-caution: #b79cf8;
-    --color-warning: #d8a039;
-
+    --navbar-bg: #0f1419;
+    --accent-soft: #1b2733;
     --shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   }
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html {
   scroll-padding-top: calc(var(--navbar-height) + var(--toolbar-height) + 1rem);
@@ -89,31 +109,23 @@ html {
 
 body {
   margin: 0;
-  background: var(--color-background);
-  color: var(--color-text);
-  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 16px;
   line-height: 1.6;
 }
 
-a {
-  color: var(--color-link);
-  text-decoration: none;
-}
-
-a:hover {
-  color: var(--color-link-hover);
-  text-decoration: underline;
-}
-
-/* ---- navbar --------------------------------------------------------- */
+/* ====================================================================== */
+/* The shell                                                              */
+/* ====================================================================== */
 
 .header {
   position: fixed;
   inset: 0 0 auto 0;
   z-index: 30;
   height: var(--navbar-height);
-  background: var(--color-navbar);
+  background: var(--navbar-bg);
 }
 
 .navbar {
@@ -121,53 +133,26 @@ a:hover {
   align-items: stretch;
   height: 100%;
   padding: 0 1rem;
-  color: var(--color-navbar-text);
+  color: var(--navbar-fg);
 }
 
-.navbar-brand {
-  display: flex;
-  align-items: stretch;
-  flex: 1;
-  min-width: 0;
-}
-
-.navbar-brand .navbar-item {
-  font-size: 1.0625rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
+.navbar-brand { display: flex; align-items: stretch; flex: 1; min-width: 0; }
+.navbar-brand .navbar-item { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; }
 
 .navbar-item {
   display: flex;
   align-items: center;
   padding: 0 0.75rem;
-  color: var(--color-navbar-text);
+  color: var(--navbar-fg);
+  text-decoration: none;
   white-space: nowrap;
 }
 
-.navbar-item:first-child {
-  padding-left: 0;
-}
+.navbar-item:first-child { padding-left: 0; }
+.navbar-item:hover { color: #fff; text-decoration: none; }
 
-.navbar-item:hover {
-  color: #fff;
-  text-decoration: none;
-}
-
-.navbar-menu {
-  display: flex;
-  align-items: stretch;
-}
-
-.navbar-end {
-  display: flex;
-  align-items: stretch;
-}
-
-.navbar-end .navbar-item {
-  color: var(--color-navbar-muted);
-  font-size: 0.875rem;
-}
+.navbar-menu, .navbar-end { display: flex; align-items: stretch; }
+.navbar-end .navbar-item { color: var(--navbar-muted); font-size: 0.875rem; }
 
 .navbar-burger {
   display: none;
@@ -180,14 +165,7 @@ a:hover {
   cursor: pointer;
 }
 
-.navbar-burger span {
-  display: block;
-  height: 2px;
-  background: var(--color-navbar-text);
-  transition: transform 0.15s ease, opacity 0.15s ease;
-}
-
-/* ---- the two columns and the article between them -------------------- */
+.navbar-burger span { display: block; height: 2px; background: var(--navbar-fg); }
 
 .body {
   display: flex;
@@ -196,30 +174,22 @@ a:hover {
   min-height: calc(100vh - var(--navbar-height));
 }
 
+/* ---- navigation sidebar ---- */
+
 .nav-container {
   position: sticky;
   top: var(--navbar-height);
   flex: 0 0 var(--nav-width);
   width: var(--nav-width);
   height: calc(100vh - var(--navbar-height));
-  border-right: 1px solid var(--color-border);
-  background: var(--color-sunken);
+  border-right: 1px solid var(--rule);
+  background: var(--sidebar-bg);
 }
 
-.nav {
-  height: 100%;
-  overflow: hidden;
-}
+.nav { height: 100%; overflow: hidden; }
+.panels { position: relative; height: 100%; }
 
-.panels {
-  position: relative;
-  height: 100%;
-}
-
-/* ---- navigation menu -------------------------------------------------- */
-
-.nav-panel-menu,
-.nav-panel-explore {
+.nav-panel-menu, .nav-panel-explore {
   height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -230,96 +200,61 @@ a:hover {
   display: none;
   position: absolute;
   inset: 0;
-  background: var(--color-sunken);
+  background: var(--sidebar-bg);
 }
 
-.nav-panel-explore.is-active {
-  display: block;
-}
+.nav-panel-explore.is-active { display: block; }
 
-.nav-menu {
-  font-size: 0.9375rem;
-}
+.nav-menu { font-size: 0.9375rem; }
 
 .nav-menu > .title {
   margin: 0 0 0.75rem;
   padding: 0 1.25rem 0 1.55rem;
   font-size: 0.75rem;
+  font-style: normal;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-faint);
+  color: var(--muted);
 }
 
-.nav-menu > .title a {
-  color: inherit;
-}
+.nav-menu > .title a { color: inherit; text-decoration: none; }
 
-.nav-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
+.nav-list { margin: 0; padding: 0; list-style: none; }
 
-/* Each level is indented by the same step, applied to the list rather than to
- * the item so a group heading and the pages under it line up with each other
- * rather than with the toggle beside them.
- *
- * The line down the left of a nested list is drawn on the list, and the space
- * a toggle sits in is *inside* it — so the arrow beside an entry never lands
- * on the line belonging to that entry's own level. */
-.nav-list .nav-list {
-  margin-left: 1.15rem;
-  border-left: 1px solid var(--color-border);
-}
+/* The line down the left of a nested list is drawn on the list, and the space
+   a toggle sits in is inside it — so the arrow beside an entry never lands on
+   the line belonging to that entry's own level. */
+.nav-list .nav-list { margin-left: 1.15rem; border-left: 1px solid var(--rule); }
 
-.nav-item {
-  position: relative;
-}
+.nav-item { position: relative; }
 
-/* A list that is not on the path to the page being read starts closed. The
- * toggle flips `is-open`, so a reader who opens a branch keeps it open while
- * they move around inside it. */
-.nav-item > .nav-list {
-  display: none;
-}
+/* A list not on the path to the page being read starts closed. The toggle
+   flips `is-open`, so a reader who opens a branch keeps it open. */
+.nav-item > .nav-list { display: none; }
+.nav-item.is-open > .nav-list { display: block; }
 
-.nav-item.is-open > .nav-list {
+.nav-link, .nav-text {
   display: block;
-}
-
-.nav-link,
-.nav-text {
-  display: block;
-
   /* The left padding is the room the toggle sits in. Every level reserves it,
-   * whether or not the entry has one, so entries at one level line up with
-   * each other rather than with whichever of them happens to expand. */
+     whether or not the entry has one, so entries at one level line up. */
   padding: 0.3rem 1.25rem 0.3rem 1.55rem;
-  color: var(--color-muted);
+  color: var(--muted);
+  text-decoration: none;
   line-height: 1.4;
 }
 
 .nav-list .nav-list .nav-link,
-.nav-list .nav-list .nav-text {
-  padding-left: 1.3rem;
-}
+.nav-list .nav-list .nav-text { padding-left: 1.3rem; }
 
-.nav-text {
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.nav-link:hover {
-  color: var(--color-text);
-  text-decoration: none;
-}
+.nav-text { font-weight: 600; color: var(--fg); }
+.nav-link:hover { color: var(--fg); text-decoration: none; }
 
 .nav-item.is-current-page > .nav-link {
-  color: var(--color-accent);
+  color: var(--accent);
   font-weight: 600;
-  background: var(--color-accent-soft);
-  box-shadow: inset 2px 0 0 var(--color-accent);
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .nav-item-toggle {
@@ -332,12 +267,10 @@ a:hover {
   border: 0;
   background: none;
   cursor: pointer;
-  color: var(--color-faint);
+  color: var(--muted);
 }
 
-.nav-list .nav-list .nav-item-toggle {
-  left: 0.1rem;
-}
+.nav-list .nav-list .nav-item-toggle { left: 0.1rem; }
 
 .nav-item-toggle::before {
   content: "";
@@ -351,24 +284,21 @@ a:hover {
   transition: transform 0.15s ease;
 }
 
-.nav-item.is-open > .nav-item-toggle::before {
-  transform: rotate(45deg);
-}
+.nav-item.is-open > .nav-item-toggle::before { transform: rotate(45deg); }
 
-/* ---- explore panel ---------------------------------------------------- */
+/* ---- explore panel ---- */
 
 .nav-panel-explore .context {
   display: flex;
   flex-direction: column;
-  padding: 0 1.25rem 0.75rem 2.25rem;
   position: relative;
-  border-bottom: 1px solid var(--color-border);
+  padding: 0 1.25rem 0.75rem 2.25rem;
+  border-bottom: 1px solid var(--rule);
   margin-bottom: 0.75rem;
 }
 
-.nav-panel-explore .context .title {
-  font-weight: 600;
-}
+.nav-panel-explore .context .title { font-weight: 600; font-style: normal; color: var(--fg); margin: 0; }
+.nav-panel-explore .context .version { font-size: 0.8125rem; color: var(--muted); }
 
 .nav-panel-explore .back {
   position: absolute;
@@ -379,7 +309,7 @@ a:hover {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--color-faint);
+  color: var(--muted);
   cursor: pointer;
 }
 
@@ -394,59 +324,20 @@ a:hover {
   transform: rotate(45deg);
 }
 
-.nav-panel-explore .back:hover {
-  color: var(--color-text);
-}
+.nav-panel-explore .back:hover { color: var(--fg); }
 
-.nav-panel-explore .context .version {
-  font-size: 0.8125rem;
-  color: var(--color-faint);
-}
+.components { margin: 0; padding: 0; list-style: none; font-size: 0.9375rem; }
+.components .component { padding: 0.35rem 1.25rem; }
+.components .component > .title { font-weight: 600; font-style: normal; color: var(--fg); margin: 0; }
+.components .component > .title a { text-decoration: none; }
+.components .component.is-current > .title a { color: var(--accent); }
+.components .versions { margin: 0.15rem 0 0; padding: 0 0 0 0.75rem; list-style: none; border-left: 1px solid var(--rule); }
+.components .versions .version a { display: block; padding: 0.15rem 0.5rem; font-size: 0.875rem; color: var(--muted); text-decoration: none; }
+.components .versions .version.is-current a { color: var(--accent); font-weight: 600; }
 
-.components {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.9375rem;
-}
+/* ---- toolbar ---- */
 
-.components .component {
-  padding: 0.35rem 1.25rem;
-}
-
-.components .component > .title {
-  font-weight: 600;
-}
-
-.components .component.is-current > .title a {
-  color: var(--color-accent);
-}
-
-.components .versions {
-  margin: 0.15rem 0 0;
-  padding: 0 0 0 0.75rem;
-  list-style: none;
-  border-left: 1px solid var(--color-border);
-}
-
-.components .versions .version a {
-  display: block;
-  padding: 0.15rem 0.5rem;
-  font-size: 0.875rem;
-  color: var(--color-muted);
-}
-
-.components .versions .version.is-current a {
-  color: var(--color-accent);
-  font-weight: 600;
-}
-
-/* ---- toolbar ---------------------------------------------------------- */
-
-main.article {
-  flex: 1;
-  min-width: 0;
-}
+main.article { flex: 1; min-width: 0; }
 
 .toolbar {
   position: sticky;
@@ -457,11 +348,13 @@ main.article {
   gap: 0.5rem;
   height: var(--toolbar-height);
   padding: 0 1.5rem;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-background);
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg);
   font-size: 0.8125rem;
-  color: var(--color-muted);
+  color: var(--muted);
 }
+
+.toolbar a { text-decoration: none; }
 
 .nav-toggle {
   display: none;
@@ -471,7 +364,7 @@ main.article {
   border: 0;
   background: none;
   cursor: pointer;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .nav-toggle::before {
@@ -495,58 +388,25 @@ main.article {
   --home-icon: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3 2 11h3v10h5v-6h4v6h5V11h3Z"/></svg>');
 }
 
-.home-link:hover,
-.home-link.is-current {
-  opacity: 1;
-  color: var(--color-accent);
-}
+.home-link:hover, .home-link.is-current { opacity: 1; color: var(--accent); }
 
-.breadcrumbs {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
+.breadcrumbs { flex: 1; min-width: 0; overflow: hidden; }
+.breadcrumbs ul { display: flex; margin: 0; padding: 0; list-style: none; white-space: nowrap; }
+.breadcrumbs li + li::before { content: "/"; margin: 0 0.4rem; color: var(--muted); }
+.breadcrumbs a { color: var(--muted); }
+.breadcrumbs li:last-child { color: var(--fg); overflow: hidden; text-overflow: ellipsis; }
 
-.breadcrumbs ul {
-  display: flex;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  white-space: nowrap;
-}
-
-.breadcrumbs li + li::before {
-  content: "/";
-  margin: 0 0.4rem;
-  color: var(--color-faint);
-}
-
-.breadcrumbs a {
-  color: var(--color-muted);
-}
-
-.breadcrumbs li:last-child {
-  color: var(--color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ---- version selector -------------------------------------------------- */
-
-.page-versions {
-  position: relative;
-  flex: none;
-}
+.page-versions { position: relative; flex: none; }
 
 .version-menu-toggle {
   display: flex;
   align-items: center;
   gap: 0.35rem;
   padding: 0.2rem 0.5rem;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--rule);
   border-radius: var(--radius);
-  background: var(--color-background);
-  color: var(--color-text);
+  background: var(--bg);
+  color: var(--fg);
   font: inherit;
   cursor: pointer;
 }
@@ -568,59 +428,32 @@ main.article {
   z-index: 10;
   min-width: 100%;
   padding: 0.25rem 0;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: var(--radius);
-  background: var(--color-background);
+  background: var(--bg);
   box-shadow: var(--shadow);
 }
 
-.page-versions.is-open .version-menu {
-  display: block;
-}
+.page-versions.is-open .version-menu { display: block; }
 
-.version-menu .version {
-  display: block;
-  padding: 0.25rem 0.9rem;
-  color: var(--color-text);
-  white-space: nowrap;
-}
+.version-menu .version { display: block; padding: 0.25rem 0.9rem; color: var(--fg); white-space: nowrap; }
+.version-menu .version:hover { background: var(--sidebar-bg); }
+.version-menu .version.is-current { font-weight: 600; color: var(--accent); }
 
-.version-menu .version:hover {
-  background: var(--color-sunken);
-  text-decoration: none;
-}
+/* A version that has not got this page leads to its start page instead, and
+   says so rather than looking like the same page somewhere else. */
+.version-menu .version.is-missing { color: var(--muted); font-style: italic; }
 
-.version-menu .version.is-current {
-  font-weight: 600;
-  color: var(--color-accent);
-}
+.edit-this-page { flex: none; }
+.edit-this-page a { color: var(--muted); }
 
-/* A version that does not have this page leads to its start page instead,
- * and says so rather than looking like the same page somewhere else. */
-.version-menu .version.is-missing {
-  color: var(--color-faint);
-  font-style: italic;
-}
-
-.edit-this-page {
-  flex: none;
-}
-
-.edit-this-page a {
-  color: var(--color-muted);
-}
-
-/* ---- content and outline ------------------------------------------------ */
+/* ---- content column and outline ---- */
 
 /* `main.article > .content` and not `.content`: Asciidoctor uses that class
- * inside an admonition, a listing and an image block too, and a layout rule
- * that reached those would lay the *contents of a note* out as a two-column
- * page. */
+   inside an admonition, a listing and an image block too, and a layout rule
+   reaching those would lay out the contents of a note as a two-column page. */
 main.article > .content {
   display: grid;
-  /* `1fr` rather than the max width: with the container capped and centred,
-   * the article fills what is left, so a short line does not leave the
-   * outline drifting in towards the middle of the page. */
   grid-template-columns: minmax(0, 1fr) var(--toc-width);
   align-items: start;
   column-gap: 2.5rem;
@@ -629,25 +462,17 @@ main.article > .content {
   padding: 0 1.5rem 4rem;
 }
 
-/* Placed rather than ordered, so the outline can come first in the markup —
- * where a reader using a screen reader meets it before the article rather than
- * after it — and still be drawn beside it. */
 /* A page with no headings has no outline, and a reserved-but-empty column
- * would push the article off to one side for no reason. */
+   would push the article off to one side for no reason. */
 main.article > .content:not(:has(> .toc.sidebar)) {
   grid-template-columns: minmax(0, 1fr);
   max-width: calc(var(--doc-max-width) + 3rem);
 }
 
-main.article > .content > .toc.sidebar {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-main.article > .content > article.doc {
-  grid-column: 1;
-  grid-row: 1;
-}
+/* Placed rather than ordered, so the outline can come first in the markup —
+   where a screen reader meets it before the article — and still sit beside it. */
+main.article > .content > .toc.sidebar { grid-column: 2; grid-row: 1; }
+main.article > .content > article.doc { grid-column: 1; grid-row: 1; }
 
 .toc.sidebar {
   position: sticky;
@@ -655,7 +480,7 @@ main.article > .content > article.doc {
   width: var(--toc-width);
   max-height: calc(100vh - var(--navbar-height) - var(--toolbar-height));
   overflow-y: auto;
-  padding: 2rem 0 2rem;
+  padding: 2rem 0;
   font-size: 0.8125rem;
 }
 
@@ -665,678 +490,340 @@ main.article > .content > article.doc {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-faint);
+  color: var(--muted);
 }
 
-.toc-menu ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.toc-menu ul ul {
-  padding-left: 0.75rem;
-}
+.toc-menu ul { margin: 0; padding: 0; list-style: none; }
+.toc-menu ul ul { padding-left: 0.75rem; }
 
 .toc-menu a {
   display: block;
   padding: 0.15rem 0 0.15rem 0.6rem;
   border-left: 2px solid transparent;
-  color: var(--color-muted);
+  color: var(--muted);
+  text-decoration: none;
   line-height: 1.4;
 }
 
-.toc-menu a:hover {
-  color: var(--color-text);
-  text-decoration: none;
-}
+.toc-menu a:hover { color: var(--fg); }
+.toc-menu a.is-active { border-left-color: var(--accent); color: var(--accent); }
 
-.toc-menu a.is-active {
-  border-left-color: var(--color-accent);
-  color: var(--color-accent);
-}
+article.doc { min-width: 0; padding: 1.5rem 0 0; }
 
-article.doc {
-  min-width: 0;
-  padding: 1.5rem 0 0;
-}
-
-/* `page-role: -toc` is how a page says it wants the full width. The role
- * reaches the `body`, so the whole grid collapses to one column rather than
- * leaving an empty track where the outline was. */
+/* `page-role: -toc` is how a page says it wants the full width. */
 body.-toc main.article > .content {
   grid-template-columns: minmax(0, 1fr);
   max-width: calc(var(--doc-max-width) + 3rem);
 }
 
-body.-toc .toc.sidebar {
-  display: none;
+body.-toc .toc.sidebar { display: none; }
+
+/* ---- footer and pagination ---- */
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.9375rem;
 }
 
-/* ---- the article itself -------------------------------------------------- */
+.pagination a { text-decoration: none; }
+.pagination .prev::before { content: "\2190\00a0"; color: var(--muted); }
+.pagination .next { margin-left: auto; text-align: right; }
+.pagination .next::after { content: "\00a0\2192"; color: var(--muted); }
 
-.doc h1,
-.doc h2,
-.doc h3,
-.doc h4,
-.doc h5,
-.doc h6 {
-  margin: 2rem 0 0.75rem;
-  font-weight: 650;
+.footer {
+  padding: 1.5rem;
+  border-top: 1px solid var(--rule);
+  background: var(--sidebar-bg);
+  font-size: 0.8125rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.footer p { margin: 0; }
+.footer a { color: inherit; }
+
+/* ====================================================================== */
+/* The article — adocers' stylesheet, scoped to `.doc`                     */
+/* ====================================================================== */
+
+.doc h1, .doc h2, .doc h3, .doc h4, .doc h5, .doc h6 {
   line-height: 1.25;
-  letter-spacing: -0.015em;
+  margin: 2rem 0 0.75rem;
+  font-weight: 600;
   scroll-margin-top: calc(var(--navbar-height) + var(--toolbar-height) + 1rem);
 }
 
-.doc h1.page {
-  margin: 0.5rem 0 1.5rem;
-  font-size: 2.125rem;
+.doc h1 { font-size: 2rem; margin-top: 0; }
+.doc h2 { font-size: 1.6rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--rule); }
+.doc h3 { font-size: 1.3rem; }
+.doc h4 { font-size: 1.1rem; }
+.doc h5, .doc h6 { font-size: 1rem; }
+.doc h1.page { margin-bottom: 1.25rem; }
+.doc h1 .subtitle { color: var(--muted); font-weight: 400; }
+
+/* `:sectanchors:` puts an empty link before a heading, which needs a mark of
+   its own to be worth anything. It sits in the margin so the heading does not
+   move when it appears. */
+.doc h1 .anchor, .doc h2 .anchor, .doc h3 .anchor,
+.doc h4 .anchor, .doc h5 .anchor, .doc h6 .anchor {
+  position: absolute; margin-left: -1em; width: 1em;
+  opacity: 0; text-align: center; font-weight: 400; color: var(--muted);
 }
 
-.doc h2 {
-  margin-top: 2.75rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--color-border);
-  font-size: 1.5rem;
-}
+.doc h1 .anchor::before, .doc h2 .anchor::before, .doc h3 .anchor::before,
+.doc h4 .anchor::before, .doc h5 .anchor::before, .doc h6 .anchor::before { content: "\00A7"; }
 
-.doc h3 { font-size: 1.25rem; }
-.doc h4 { font-size: 1.0625rem; }
-.doc h5 { font-size: 1rem; }
-.doc h6 { font-size: 0.9375rem; color: var(--color-muted); }
+.doc h1:hover .anchor, .doc h2:hover .anchor, .doc h3:hover .anchor,
+.doc h4:hover .anchor, .doc h5:hover .anchor, .doc h6:hover .anchor,
+.doc .anchor:focus { opacity: 1; }
 
-/* ---- what a document says about itself ---------------------------------- */
+.doc h1 > .link, .doc h2 > .link, .doc h3 > .link,
+.doc h4 > .link, .doc h5 > .link, .doc h6 > .link { color: inherit; text-decoration: none; }
 
-.doc > .details {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.25rem 0.75rem;
-  margin: -0.75rem 0 1.75rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 0.875rem;
-  color: var(--color-muted);
-}
+.doc h1 > .link:hover, .doc h2 > .link:hover, .doc h3 > .link:hover,
+.doc h4 > .link:hover, .doc h5 > .link:hover, .doc h6 > .link:hover { text-decoration: underline; }
 
-.doc > .details .detail {
-  display: contents;
-}
+/* A link in a run of text is underlined rather than only coloured. Where a
+   whole block is links — a heading, an image — the underline is noise. */
+.doc a { color: var(--accent); text-decoration: underline; text-underline-offset: 0.15em; }
+.doc a:hover { text-decoration-thickness: 2px; }
+.doc a.image, .doc a.anchor { text-decoration: none; }
 
-.doc > .details .label {
-  font-weight: 600;
-  color: var(--color-faint);
-  white-space: nowrap;
-}
+.doc p { margin: 0 0 1rem; }
+.doc hr { border: 0; border-top: 1px solid var(--rule); margin: 2rem 0; }
 
-.doc > .details .value {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.3rem;
-  min-width: 0;
-}
+/* What a document says about itself. */
+.doc > .details { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+.doc > .details .detail { line-height: 1.5; }
+.doc > .details .label { font-weight: 600; }
+.doc .tag { display: inline-block; padding: 0.02em 0.5em; border: 1px solid var(--rule); border-radius: 999px; font-size: 0.9em; }
+.doc a:has(.tag) { text-decoration: none; }
+.doc a:hover .tag { border-color: var(--accent); color: var(--accent); }
 
-.doc .tag {
-  display: inline-block;
-  padding: 0.05em 0.5em;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 999px;
-  background: var(--color-sunken);
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--color-muted);
-}
+.doc .title { font-style: italic; color: var(--muted); margin-bottom: 0.4rem; font-size: 0.95rem; }
 
-.doc a .tag {
-  color: var(--color-link);
-  border-color: var(--color-link);
-}
+/* Code */
+.doc code, .doc pre { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-size: 0.9em; }
+.doc code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 3px; }
+.doc pre { background: var(--code-bg); padding: 0.9rem 1rem; border-radius: 6px; overflow-x: auto; line-height: 1.45; margin: 0; }
+.doc pre code { background: none; padding: 0; }
+.doc pre:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.doc .listingblock, .doc .literalblock { margin-bottom: 1.25rem; }
+.doc .listingblock .content, .doc .literalblock .content { position: relative; }
 
-.doc a:hover .tag {
-  background: var(--color-accent-soft);
-  text-decoration: none;
-}
+/* Syntax highlighting. Several tree-sitter captures share a colour on purpose:
+   a builtin function is still a function to a reader, and a listing that picks
+   out everything picks out nothing. */
+.hl-comment { color: var(--hl-comment); font-style: italic; }
+.hl-keyword { color: var(--hl-keyword); }
+.hl-string { color: var(--hl-string); }
+.hl-number { color: var(--hl-number); }
+.hl-constant { color: var(--hl-constant); }
+.hl-function { color: var(--hl-function); }
+.hl-type { color: var(--hl-type); }
+.hl-property { color: var(--hl-property); }
+.hl-attr { color: var(--hl-property); }
+.hl-tag { color: var(--hl-tag); }
+.hl-escape { color: var(--hl-number); }
+.hl-label { color: var(--hl-type); }
+.hl-punctuation, .hl-operator { color: var(--hl-punctuation); }
+.hl-variable, .hl-parameter, .hl-unknown { color: inherit; }
 
-.doc a:has(.tag):hover {
-  text-decoration: none;
-}
+/* A callout keeps its own weight against whatever the highlighter did. */
+.doc .listingblock .conum { color: var(--accent); font-weight: 600; font-style: normal; }
 
-.doc .subtitle {
-  display: block;
-  font-size: 0.6em;
-  font-weight: 400;
-  color: var(--color-muted);
-}
-
-/* The anchor beside a heading appears on hover, which keeps a permalink
- * available without putting a symbol in front of every title. */
-.doc .anchor {
-  position: absolute;
-  margin-left: -1.1em;
-  width: 1.1em;
-  opacity: 0;
-  text-align: left;
-  font-weight: 400;
-  color: var(--color-faint);
-}
-
-.doc .anchor::before {
-  content: "#";
-}
-
-.doc h1:hover .anchor,
-.doc h2:hover .anchor,
-.doc h3:hover .anchor,
-.doc h4:hover .anchor,
-.doc h5:hover .anchor,
-.doc h6:hover .anchor,
-.doc .anchor:focus {
-  opacity: 1;
-  text-decoration: none;
-}
-
-.doc p,
-.doc dl,
-.doc ol,
-.doc ul {
-  margin: 0 0 1rem;
-}
-
-.doc .paragraph,
-.doc .ulist,
-.doc .olist,
-.doc .dlist,
-.doc .hdlist,
-.doc .qlist,
-.doc .listingblock,
-.doc .literalblock,
-.doc .admonitionblock,
-.doc .exampleblock,
-.doc .sidebarblock,
-.doc .quoteblock,
-.doc .verseblock,
-.doc .imageblock,
-.doc .videoblock,
-.doc .audioblock,
-.doc .tableblock,
-.doc table.tableblock,
-.doc .openblock,
-.doc .colist,
-.doc details {
-  margin: 0 0 1.25rem;
-}
-
-.doc .lead p,
-.doc p.lead {
-  font-size: 1.125rem;
-  color: var(--color-muted);
-}
-
-.doc ul,
-.doc ol {
-  padding-left: 1.5rem;
-}
-
-.doc li > p:last-child {
-  margin-bottom: 0;
-}
-
-.doc li .ulist,
-.doc li .olist,
-.doc li .dlist {
-  margin: 0.35rem 0;
-}
-
-.doc dl dt {
-  font-weight: 650;
-  margin-top: 0.75rem;
-}
-
-.doc dl dd {
-  margin: 0 0 0 1.5rem;
-}
-
-/* A horizontal description list is a two-column table in Asciidoctor's
- * markup, and is laid out as one here rather than restyled into something
- * else. */
-.doc .hdlist table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.doc .hdlist td {
-  padding: 0.25rem 1rem 0.25rem 0;
-  vertical-align: top;
-}
-
-.doc .hdlist td.hdlist1 {
-  width: 1px;
-  white-space: nowrap;
-  font-weight: 650;
-}
-
-/* The checklist marker is a character rather than an icon, so the bullet is
- * removed and the character takes its place. */
-.doc ul.checklist {
-  padding-left: 0.5rem;
-  list-style: none;
-}
-
-.doc .qlist.qanda > ol {
-  padding-left: 1.5rem;
-}
-
-.doc .qlist.qanda > ol > li > p:first-child {
-  font-weight: 650;
-}
-
-.doc blockquote {
-  margin: 0;
-}
-
-.doc .title {
-  margin-bottom: 0.35rem;
-  font-size: 0.875rem;
-  font-weight: 650;
-  color: var(--color-muted);
-}
-
-/* ---- code ---------------------------------------------------------------- */
-
-.doc code,
-.doc kbd,
-.doc samp {
-  font-family: var(--font-mono);
-  font-size: 0.875em;
-}
-
-.doc p code,
-.doc li code,
-.doc td code,
-.doc dt code,
-.doc h1 code,
-.doc h2 code,
-.doc h3 code,
-.doc h4 code {
-  padding: 0.1em 0.35em;
-  border-radius: 3px;
-  background: var(--color-sunken);
-  border: 1px solid var(--color-border);
-  white-space: nowrap;
-}
-
-.doc pre {
-  margin: 0;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-sunken);
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  overflow-x: auto;
-}
-
-/* The listing is scrollable, so it is focusable — and a focus ring that is
- * only visible on keyboard focus keeps it from appearing on every click. */
-.doc pre:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 1px;
-}
-
-.doc pre code {
-  padding: 0;
-  border: 0;
-  background: none;
-  white-space: pre;
-}
-
-.doc .listingblock .content,
-.doc .literalblock .content {
-  position: relative;
-}
-
-/* ---- callouts -------------------------------------------------------------
- *
- * The back end renders a callout list as an ordered list rather than as
- * Asciidoctor's two-column table, so the numbers come from the list and line
- * up with the circled numbers in the listing above.
- */
-
+/* A callout mark, drawn rather than written: Asciidoctor's markup names a Font
+   Awesome glyph, and nothing here pulls in that webfont. The number is in the
+   markup as data, so a circle and a counter are the whole of it, and the `(1)`
+   beside it — what a page with no stylesheet shows — comes off once it is drawn. */
 .doc .conum[data-value] {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.15em;
-  height: 1.15em;
-  border-radius: 50%;
-  background: var(--color-muted);
-  color: var(--color-background);
-  font-family: var(--font-body);
-  font-size: 0.75em;
-  font-style: normal;
-  line-height: 1;
+  display: inline-block; width: 1.3em; height: 1.3em; line-height: 1.3em;
+  border-radius: 50%; background: var(--accent); color: var(--bg);
+  text-align: center; font-family: inherit; font-size: 0.8em; font-style: normal;
+  font-weight: 600; vertical-align: 0.05em;
 }
 
-.doc .conum[data-value]::after {
-  content: attr(data-value);
-}
+.doc .conum[data-value]::after { content: attr(data-value); }
+.doc .conum[data-value] + b { display: none; }
 
-/* The listing repeats the number in bold text beside the circle so that a
- * reader who copies the block still gets it. It is not for the eye. */
-.doc .conum[data-value] + b {
-  display: none;
-}
-
-.doc .colist {
-  font-size: 0.9375rem;
-  color: var(--color-muted);
-}
-
-.doc .colist ol {
-  padding-left: 1.5rem;
-}
-
-.doc .colist ol li::marker {
-  font-weight: 650;
-  color: var(--color-text);
+/* The list beneath the block marks its items the same way, so an item and the
+   line it annotates carry the same mark. */
+.doc .colist.conums > ol { list-style: none; padding-left: 0; counter-reset: conum; }
+.doc .colist.conums > ol > li { counter-increment: conum; position: relative; padding-left: 2em; }
+.doc .colist.conums > ol > li::before {
+  content: counter(conum); position: absolute; left: 0; top: 0.1em;
+  display: inline-block; width: 1.3em; height: 1.3em; line-height: 1.3em;
+  border-radius: 50%; background: var(--accent); color: var(--bg);
+  text-align: center; font-size: 0.8em; font-weight: 600;
 }
 
 /* Asciidoctor's own table form, for a build that emits it. */
-.doc .colist > table {
-  border-collapse: collapse;
-}
+.doc .colist > table { border-collapse: collapse; }
+.doc .colist > table td { padding: 0.15rem 0.5rem 0.15rem 0; vertical-align: top; }
 
-.doc .colist > table td {
-  padding: 0.15rem 0.5rem 0.15rem 0;
-  vertical-align: top;
-}
+/* Quotes */
+.doc .quoteblock { margin: 1.25rem 0; }
+.doc .quoteblock blockquote { margin: 0; padding: 0.25rem 0 0.25rem 1.25rem; border-left: 4px solid var(--rule); color: var(--fg); }
+.doc .verseblock pre.content { background: none; padding: 0 0 0 1.25rem; border-left: 4px solid var(--rule); white-space: pre-wrap; }
+.doc .attribution { color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem; }
+.doc .attribution cite { font-style: italic; }
 
-/* ---- admonitions ----------------------------------------------------------
+/* A stem block is a displayed equation: it stands apart from the text the way a
+   figure does, and a long one scrolls rather than pushing the column wide. */
+.doc .stemblock { margin: 1.5rem 0; text-align: center; }
+.doc .stemblock > .content { overflow-x: auto; }
+
+/* ---- admonitions ------------------------------------------------------
  *
- * The back end marks an admonition with an inline SVG rather than with a font
- * icon, so the icon cell is sized for a drawing and colored through
- * `currentColor`.
+ * The one place this deliberately parts from adocers: a bordered box with a
+ * coloured edge rather than an icon column with a rule beside it. The icon is
+ * centred against the whole block rather than sitting at its top — the mark
+ * stands for the block, and a tall one left it stranded at the ceiling.
  */
 
-.doc .admonitionblock > table {
-  width: 100%;
-  border-collapse: collapse;
+.doc .admonitionblock {
+  margin: 1.4rem 0;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--admon);
+  border-radius: var(--radius);
+  background: var(--sidebar-bg);
 }
+
+.doc .admonitionblock > table { width: 100%; border-collapse: collapse; border: 0; background: none; }
 
 .doc .admonitionblock td.icon {
-  width: 3rem;
+  width: 3.5rem;
   padding: 0.9rem 0 0.9rem 0.9rem;
-  vertical-align: top;
   text-align: center;
+  vertical-align: middle;
+  color: var(--admon);
 }
 
-.doc .admonitionblock td.icon svg.icon {
-  width: 1.5rem;
-  height: 1.5rem;
-}
+.doc .admonitionblock td.icon .icon { width: 1.75rem; height: 1.75rem; }
 
 .doc .admonitionblock td.icon .title {
   margin: 0;
-  font-size: 0.6875rem;
+  font-style: normal;
   font-weight: 700;
-  letter-spacing: 0.05em;
   text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  color: var(--admon);
 }
 
-.doc .admonitionblock td.content {
-  padding: 0.9rem 1rem;
-}
+.doc .admonitionblock td.content { padding: 0.9rem 1rem; vertical-align: middle; }
+.doc .admonitionblock td.content > :last-child { margin-bottom: 0; }
+.doc .admonitionblock td.content > .title { text-transform: uppercase; font-style: normal; font-weight: 600; color: var(--fg); }
 
-.doc .admonitionblock td.content > :last-child {
-  margin-bottom: 0;
-}
+.doc .admonitionblock.note { --admon: var(--admon-note); }
+.doc .admonitionblock.tip { --admon: var(--admon-tip); }
+.doc .admonitionblock.important { --admon: var(--admon-important); }
+.doc .admonitionblock.caution { --admon: var(--admon-caution); }
+.doc .admonitionblock.warning { --admon: var(--admon-warning); }
 
-.doc .admonitionblock {
-  border: 1px solid var(--color-border);
-  border-left-width: 3px;
-  border-radius: var(--radius);
-  background: var(--color-sunken);
-}
+/* Sidebars, examples, open blocks */
+.doc .sidebarblock { background: var(--sidebar-bg); border-radius: 6px; padding: 1rem 1.25rem; margin: 1.25rem 0; }
+.doc .sidebarblock > .content > :last-child { margin-bottom: 0; }
+.doc .exampleblock > .content { border: 1px solid var(--rule); border-radius: 6px; padding: 1rem 1.25rem; }
+.doc .exampleblock > .content > :last-child { margin-bottom: 0; }
+.doc .exampleblock, .doc .openblock { margin: 1.25rem 0; }
+.doc details { margin: 1.25rem 0; }
+.doc details > summary { cursor: pointer; }
+.doc details > .content { border: 1px solid var(--rule); border-radius: 6px; padding: 1rem 1.25rem; }
+.doc details > .content > :last-child { margin-bottom: 0; }
 
-.doc .admonitionblock.note { border-left-color: var(--color-note); }
-.doc .admonitionblock.tip { border-left-color: var(--color-tip); }
-.doc .admonitionblock.important { border-left-color: var(--color-important); }
-.doc .admonitionblock.caution { border-left-color: var(--color-caution); }
-.doc .admonitionblock.warning { border-left-color: var(--color-warning); }
+/* Lists */
+.doc ul, .doc ol { padding-left: 1.5rem; }
+.doc .ulist, .doc .olist, .doc .dlist, .doc .colist, .doc .qlist, .doc .hdlist { margin-bottom: 1.25rem; }
+.doc .ulist li p, .doc .olist li p, .doc .dlist dd p { margin-bottom: 0.35rem; }
+.doc .checklist { list-style: none; padding-left: 0.5rem; }
 
-.doc .admonitionblock.note td.icon { color: var(--color-note); }
-.doc .admonitionblock.tip td.icon { color: var(--color-tip); }
-.doc .admonitionblock.important td.icon { color: var(--color-important); }
-.doc .admonitionblock.caution td.icon { color: var(--color-caution); }
-.doc .admonitionblock.warning td.icon { color: var(--color-warning); }
+/* The bullet styles an author can ask for by name. */
+.doc ul.square { list-style-type: square; }
+.doc ul.circle { list-style-type: circle; }
+.doc ul.disc { list-style-type: disc; }
+.doc ul.none, .doc ul.no-bullet { list-style: none; }
+.doc ul.unstyled { list-style: none; padding-left: 0; }
+.doc ul.inline { list-style: none; padding-left: 0; display: flex; flex-wrap: wrap; gap: 0 1rem; }
+.doc ul.inline > li > p { margin: 0; }
 
-/* ---- example, sidebar, quote --------------------------------------------- */
+/* A styled description list carries no class on its terms, so the term is
+   styled by where it sits rather than by what it is. */
+.doc .dlist dt { font-weight: 600; margin-top: 0.75rem; }
+.doc dd { margin-left: 1.5rem; }
+.doc .hdlist table { border-collapse: collapse; }
+.doc .hdlist td { padding: 0.25rem 1rem 0.25rem 0; vertical-align: top; }
+.doc .hdlist td.hdlist1 { font-weight: 600; }
+.doc .qlist.qanda > ol > li > p:first-child { font-weight: 600; }
 
-.doc .exampleblock > .content,
-.doc details > .content {
-  padding: 1rem 1.15rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-background);
-}
+/* Images and media */
+.doc .imageblock, .doc .videoblock, .doc .audioblock { margin: 1.5rem 0; }
+.doc .imageblock .content, .doc .videoblock .content { text-align: center; }
+.doc img, .doc video, .doc audio { max-width: 100%; height: auto; }
+.doc .imageblock .title { text-align: center; margin-top: 0.5rem; }
+.doc span.image.right { float: right; margin-left: 1rem; }
+.doc span.image.left { float: left; margin-right: 1rem; }
+.doc .videoblock iframe { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: var(--radius); }
 
-.doc .exampleblock > .content > :last-child,
-.doc details > .content > :last-child,
-.doc .sidebarblock > .content > :last-child {
-  margin-bottom: 0;
-}
+/* Diagrams */
+.doc .diagram > .content { text-align: center; overflow-x: auto; }
+.doc pre.mermaid { background: none; padding: 0; margin: 0; text-align: center; line-height: normal; }
+/* A diagram is held to the column, whatever width it was drawn at. The scroll
+   on the box above is the fallback for one that cannot be made to fit. */
+.doc .diagram svg, .doc pre.mermaid svg { display: inline-block; vertical-align: top; max-width: 100%; height: auto; }
+.doc pre.mermaid:not([data-processed]) { text-align: left; background: var(--code-bg); padding: 0.9rem 1rem; border-radius: 6px; }
 
-.doc details > summary.title {
-  cursor: pointer;
-  padding: 0.35rem 0;
-  color: var(--color-text);
-}
+/* Tables */
+.doc table.tableblock { border-collapse: collapse; margin: 1.5rem 0; font-size: 0.95rem; }
+.doc table.tableblock.stretch { width: 100%; }
+.doc table.tableblock.fit-content { width: auto; }
+.doc table.tableblock caption.title { text-align: left; margin-bottom: 0.5rem; }
+.doc table.tableblock th, .doc table.tableblock td { padding: 0.5rem 0.75rem; vertical-align: top; }
+.doc table.tableblock th { font-weight: 600; text-align: left; }
+.doc table.tableblock p.tableblock { margin: 0; }
+.doc table.frame-all { border: 1px solid var(--rule); }
+.doc table.frame-ends { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.doc table.frame-sides { border-left: 1px solid var(--rule); border-right: 1px solid var(--rule); }
+.doc table.grid-all th, .doc table.grid-all td { border: 1px solid var(--rule); }
+.doc table.grid-rows th, .doc table.grid-rows td { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.doc table.grid-cols th, .doc table.grid-cols td { border-left: 1px solid var(--rule); border-right: 1px solid var(--rule); }
+.doc table.stripes-even tbody tr:nth-child(even),
+.doc table.stripes-odd tbody tr:nth-child(odd),
+.doc table.stripes-all tbody tr { background: var(--code-bg); }
+.doc table.stripes-hover tbody tr:hover { background: var(--code-bg); }
 
-.doc .sidebarblock {
-  padding: 1.15rem 1.35rem;
-  border-radius: var(--radius);
-  background: var(--color-sunken);
-  border: 1px solid var(--color-border);
-}
+/* A cell's own alignment has to out-specify the defaults above, or a header
+   cell would silently ignore the `^` or `>` its author wrote. */
+.doc table.tableblock td.halign-center, .doc table.tableblock th.halign-center { text-align: center; }
+.doc table.tableblock td.halign-right, .doc table.tableblock th.halign-right { text-align: right; }
+.doc table.tableblock td.halign-left, .doc table.tableblock th.halign-left { text-align: left; }
+.doc table.tableblock td.valign-middle, .doc table.tableblock th.valign-middle { vertical-align: middle; }
+.doc table.tableblock td.valign-bottom, .doc table.tableblock th.valign-bottom { vertical-align: bottom; }
 
-.doc .sidebarblock > .content > .title {
-  font-size: 1.0625rem;
-  color: var(--color-text);
-}
+/* A literal cell is still a table cell: the code-block chrome would make the
+   row taller than its neighbours and push its text out of line with them. */
+.doc table.tableblock .literal pre { background: none; padding: 0; border-radius: 0; }
 
-.doc .quoteblock,
-.doc .verseblock {
-  padding-left: 1.15rem;
-  border-left: 3px solid var(--color-border-strong);
-  color: var(--color-muted);
-}
+/* Footnotes */
+.doc #footnotes { margin-top: 2.5rem; font-size: 0.9rem; color: var(--muted); }
+.doc #footnotes hr { margin: 0 0 1rem; }
+.doc #footnotes .footnote { margin-bottom: 0.5rem; padding-left: 1.5rem; text-indent: -1.5rem; }
+.doc #footnotes .footnote > a { font-weight: 600; }
 
-.doc .verseblock pre {
-  padding: 0;
-  border: 0;
-  background: none;
-  font-family: inherit;
-  font-size: inherit;
-}
-
-.doc .attribution,
-.doc .quoteblock .attribution {
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  color: var(--color-faint);
-}
-
-/* ---- tables --------------------------------------------------------------- */
-
-.doc table.tableblock {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9375rem;
-}
-
-.doc table.tableblock caption,
-.doc table.tableblock > caption {
-  margin-bottom: 0.35rem;
-  text-align: left;
-  font-size: 0.875rem;
-  font-weight: 650;
-  color: var(--color-muted);
-}
-
-.doc table.tableblock th,
-.doc table.tableblock td {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--color-border);
-  vertical-align: top;
-}
-
-.doc table.tableblock thead th {
-  border-bottom-width: 2px;
-  background: var(--color-sunken);
-  text-align: left;
-  font-weight: 650;
-}
-
-.doc table.tableblock tfoot tr {
-  background: var(--color-sunken);
-  font-weight: 650;
-}
-
-.doc table.tableblock p {
-  margin: 0;
-}
-
-.doc table.tableblock p + p {
-  margin-top: 0.5rem;
-}
-
-.doc .tableblock.frame-none th,
-.doc .tableblock.frame-none td { border-width: 0 1px; }
-
-.doc .tableblock.grid-none th,
-.doc .tableblock.grid-none td { border-width: 0; }
-
-.doc .tableblock.grid-rows th,
-.doc .tableblock.grid-rows td { border-width: 1px 0; }
-
-.doc .tableblock.grid-cols th,
-.doc .tableblock.grid-cols td { border-width: 0 1px; }
-
-.doc .tableblock tbody tr:nth-child(even),
-.doc .stripes-even tbody tr:nth-child(even) { background: var(--color-sunken); }
-
-.doc .halign-center { text-align: center; }
-.doc .halign-right { text-align: right; }
-.doc .valign-middle { vertical-align: middle; }
-.doc .valign-bottom { vertical-align: bottom; }
-
-/* ---- media ---------------------------------------------------------------- */
-
-.doc img,
-.doc svg {
-  max-width: 100%;
-  height: auto;
-}
-
-.doc .imageblock.text-center,
-.doc .imageblock.text-center > .content {
-  text-align: center;
-}
-
-.doc .imageblock > .title,
-.doc .videoblock > .title {
-  margin-top: 0.4rem;
-  margin-bottom: 0;
-}
-
-.doc span.image img {
-  vertical-align: middle;
-}
-
-.doc span.image.right {
-  float: right;
-  margin-left: 1rem;
-}
-
-.doc span.image.left {
-  float: left;
-  margin-right: 1rem;
-}
-
-.doc .videoblock iframe,
-.doc .videoblock video {
-  max-width: 100%;
-  aspect-ratio: 16 / 9;
-  width: 100%;
-  border: 0;
-  border-radius: var(--radius);
-}
-
-/* ---- inline odds and ends -------------------------------------------------- */
-
-.doc mark,
-.doc .highlight-text {
-  padding: 0 0.15em;
-  background: #fff3b0;
-  color: #232629;
-  border-radius: 2px;
-}
-
-.doc kbd {
-  display: inline-block;
-  padding: 0.05em 0.4em;
-  border: 1px solid var(--color-border-strong);
-  border-bottom-width: 2px;
-  border-radius: 3px;
-  background: var(--color-sunken);
-  font-size: 0.75em;
-  line-height: 1.5;
-}
-
-.doc .keyseq {
-  white-space: nowrap;
-}
-
-.doc .menuseq .caret {
-  margin: 0 0.25em;
-  color: var(--color-faint);
-}
-
-.doc .menuseq b {
-  font-weight: 650;
-}
-
-.doc button.button,
-.doc b.button {
-  padding: 0.05em 0.5em;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 3px;
-  background: var(--color-sunken);
-  font-size: 0.875em;
-  font-weight: 500;
-}
-
+/* Inline odds and ends */
+.doc mark { padding: 0 0.15em; background: #fff3b0; color: #1c1e21; border-radius: 2px; }
+.doc kbd { display: inline-block; padding: 0.05em 0.4em; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 3px; background: var(--code-bg); font-size: 0.75em; line-height: 1.5; }
+.doc .keyseq { white-space: nowrap; }
+.doc .menuseq .caret { margin: 0 0.25em; color: var(--muted); }
+.doc button.button, .doc b.button { padding: 0.05em 0.5em; border: 1px solid var(--rule); border-radius: 3px; background: var(--code-bg); font-size: 0.875em; font-weight: 500; }
 .doc .underline { text-decoration: underline; }
 .doc .line-through { text-decoration: line-through; }
 .doc .nowrap { white-space: nowrap; }
-
-.doc hr,
-.doc .thematic-break {
-  height: 0;
-  margin: 2rem 0;
-  border: 0;
-  border-top: 1px solid var(--color-border);
-}
-
-.doc .footnotes {
-  margin-top: 2.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--color-border);
-  font-size: 0.875rem;
-  color: var(--color-muted);
-}
-
 .doc a.xref.attachment::after {
   content: "";
   display: inline-block;
@@ -1349,61 +836,23 @@ body.-toc .toc.sidebar {
   --file-icon: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 2H6v20h12V6Zm0 0 4 4h-4Z"/></svg>');
 }
 
-/* ---- syntax highlighting ---------------------------------------------------
- *
- * The back end highlights while the site is built, with tree-sitter, and emits
- * these classes. Nothing is highlighted in the browser, so a reader with
- * scripting off sees the same colors.
- */
+/* The pagination sits inside the article, so the article's own link styling
+   reaches it. A row of two links is not a run of text and does not want the
+   underline that makes one legible. */
+.doc .pagination a { text-decoration: none; }
+.doc .pagination a:hover { text-decoration: underline; }
 
-.hl-keyword { color: #a626a4; }
-.hl-string { color: #50a14f; }
-.hl-comment { color: #a0a1a7; font-style: italic; }
-.hl-function { color: #4078f2; }
-.hl-type { color: #c18401; }
-.hl-constant,
-.hl-number { color: #986801; }
-.hl-variable { color: #e45649; }
-.hl-property,
-.hl-attr { color: #986801; }
-.hl-operator,
-.hl-punctuation { color: #5b6168; }
-.hl-tag { color: #e45649; }
-.hl-parameter { color: #383a42; }
-.hl-label { color: #a626a4; }
-.hl-escape { color: #0184bc; }
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .hl-keyword { color: #c678dd; }
-  :root:not([data-theme="light"]) .hl-string { color: #98c379; }
-  :root:not([data-theme="light"]) .hl-comment { color: #6b747f; }
-  :root:not([data-theme="light"]) .hl-function { color: #61afef; }
-  :root:not([data-theme="light"]) .hl-type { color: #e5c07b; }
-  :root:not([data-theme="light"]) .hl-constant,
-  :root:not([data-theme="light"]) .hl-number { color: #d19a66; }
-  :root:not([data-theme="light"]) .hl-variable { color: #e06c75; }
-  :root:not([data-theme="light"]) .hl-property,
-  :root:not([data-theme="light"]) .hl-attr { color: #d19a66; }
-  :root:not([data-theme="light"]) .hl-operator,
-  :root:not([data-theme="light"]) .hl-punctuation { color: #9aa4b1; }
-  :root:not([data-theme="light"]) .hl-tag { color: #e06c75; }
-  :root:not([data-theme="light"]) .hl-parameter { color: #dfe3e8; }
-  :root:not([data-theme="light"]) .hl-label { color: #c678dd; }
-  :root:not([data-theme="light"]) .hl-escape { color: #56b6c2; }
-  :root:not([data-theme="light"]) .doc mark { background: #665c1e; color: #f0e6c0; }
-}
-
-/* ---- copy button ----------------------------------------------------------- */
+/* ---- copy button ---- */
 
 .doc .listingblock .content > .copy {
   position: absolute;
   top: 0.4rem;
   right: 0.4rem;
   padding: 0.15rem 0.45rem;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--rule);
   border-radius: 3px;
-  background: var(--color-background);
-  color: var(--color-muted);
+  background: var(--bg);
+  color: var(--muted);
   font: inherit;
   font-size: 0.6875rem;
   cursor: pointer;
@@ -1411,52 +860,11 @@ body.-toc .toc.sidebar {
   transition: opacity 0.12s ease;
 }
 
-.doc .listingblock:hover .copy,
-.doc .listingblock .copy:focus-visible {
-  opacity: 1;
-}
+.doc .listingblock:hover .copy, .doc .listingblock .copy:focus-visible { opacity: 1; }
 
-/* ---- pagination and footer --------------------------------------------------- */
-
-.pagination {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: 3rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--color-border);
-  font-size: 0.9375rem;
-}
-
-.pagination .prev::before {
-  content: "\2190\00a0";
-  color: var(--color-faint);
-}
-
-.pagination .next {
-  margin-left: auto;
-  text-align: right;
-}
-
-.pagination .next::after {
-  content: "\00a0\2192";
-  color: var(--color-faint);
-}
-
-.footer {
-  padding: 1.5rem;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-sunken);
-  font-size: 0.8125rem;
-  color: var(--color-faint);
-  text-align: center;
-}
-
-.footer p {
-  margin: 0;
-}
-
-/* ---- narrow screens ------------------------------------------------------------ */
+/* ====================================================================== */
+/* Narrow screens and print                                               */
+/* ====================================================================== */
 
 @media screen and (max-width: 1200px) {
   main.article > .content {
@@ -1464,15 +872,11 @@ body.-toc .toc.sidebar {
     max-width: calc(var(--doc-max-width) + 3rem);
   }
 
-  .toc.sidebar {
-    display: none;
-  }
+  .toc.sidebar { display: none; }
 }
 
 @media screen and (max-width: 1024px) {
-  .navbar-burger {
-    display: flex;
-  }
+  .navbar-burger { display: flex; }
 
   .navbar-menu {
     display: none;
@@ -1482,22 +886,13 @@ body.-toc .toc.sidebar {
     left: 0;
     flex-direction: column;
     padding: 0.5rem 1rem;
-    background: var(--color-navbar);
+    background: var(--navbar-bg);
     box-shadow: var(--shadow);
   }
 
-  .navbar-menu.is-active {
-    display: flex;
-  }
-
-  .navbar-end {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .nav-toggle {
-    display: block;
-  }
+  .navbar-menu.is-active { display: flex; }
+  .navbar-end { flex-direction: column; align-items: stretch; }
+  .nav-toggle { display: block; }
 
   .nav-container {
     position: fixed;
@@ -1510,37 +905,13 @@ body.-toc .toc.sidebar {
     box-shadow: var(--shadow);
   }
 
-  .nav-container.is-open {
-    transform: none;
-  }
-
-  .content {
-    padding: 0 1rem 3rem;
-  }
+  .nav-container.is-open { transform: none; }
+  main.article > .content { padding: 0 1rem 3rem; }
 }
 
 @media print {
-  .header,
-  .nav-container,
-  .toolbar,
-  .footer,
-  .pagination,
-  .copy {
-    display: none !important;
-  }
-
-  .toc.sidebar {
-    display: block;
-    position: static;
-    width: auto;
-    max-height: none;
-  }
-
-  .body {
-    margin-top: 0;
-  }
-
-  article.doc {
-    max-width: none;
-  }
+  .header, .nav-container, .toolbar, .footer, .pagination, .copy { display: none !important; }
+  .toc.sidebar { display: block; position: static; width: auto; max-height: none; }
+  .body { margin-top: 0; }
+  main.article > .content { display: block; max-width: none; }
 }
