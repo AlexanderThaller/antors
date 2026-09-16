@@ -9,17 +9,20 @@ repository = "https://github.com/AlexanderThaller/antors"
 rust-version = "1.96"
 
 [workspace.dependencies]
-antors-asciidoc = { version = "0.1", path = "crates/antors-asciidoc" }
+# Both of these are taken with their defaults off by the only crate that
+# depends on them, which re-enables what it wants through features of its own —
+# so the workspace entry says so, rather than a member trying to override it
+# and cargo refusing.
+antors-asciidoc = { version = "0.1", path = "crates/antors-asciidoc", default-features = false }
 antors-content = { version = "0.1", path = "crates/antors-content" }
 antors-model = { version = "0.1", path = "crates/antors-model" }
-antors-site = { version = "0.1", path = "crates/antors-site" }
+antors-site = { version = "0.1", path = "crates/antors-site", default-features = false }
 antors-ui = { version = "0.1", path = "crates/antors-ui" }
-# Path dependencies while the two are developed together: antors reuses the
-# back end's stylesheet rather than keeping a copy of it, so a change on either
-# side wants to be visible on the other without a release in between. Swap the
-# `path` for a version before publishing.
-adocers-html = { version = "0.1", path = "../adocers/crates/adocers-html", default-features = false }
-adocers-render-core = { version = "0.1", path = "../adocers/crates/adocers-render-core", default-features = false }
+# Path dependencies until the registry mirror carries adocers 0.2, which is
+# published. Dropping the two `path` keys — and this flake's `adocers` input
+# with them — is the whole of the change.
+adocers-html = { version = "0.2", path = "../adocers/crates/adocers-html", default-features = false }
+adocers-render-core = { version = "0.2", path = "../adocers/crates/adocers-render-core", default-features = false }
 anyhow = "1"
 # Only what reading a repository needs: refs, trees and blobs. No network, no
 # worktree checkout, no index — a build reads history, it does not change it.
@@ -81,7 +84,7 @@ math = ["antors-site/math"]
 mermaid = ["antors-site/mermaid"]
 
 [dependencies]
-antors-site = { workspace = true, default-features = false }
+antors-site.workspace = true
 antors-model.workspace = true
 anyhow.workspace = true
 clap = { version = "4", features = ["derive"] }
@@ -91,6 +94,10 @@ axum = { version = "0.8", default-features = false, features = [
   "tokio",
   "query",
 ], optional = true }
+# `override` routes the C in the build through mimalloc as well — the
+# tree-sitter grammars, which allocate for every node they parse. Without it
+# only Rust's own allocations go through it.
+mimalloc = { version = "0.1", features = ["override"] }
 notify-debouncer-full = { version = "0.7", optional = true }
 tokio = { version = "1", default-features = false, features = [
   "rt-multi-thread",

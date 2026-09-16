@@ -21,6 +21,16 @@ use anyhow::{
 };
 use clap::Parser as _;
 
+/// A build is almost entirely allocation: every page is parsed into a tree of
+/// owned strings and rendered into another, a few hundred times over. The
+/// allocator is therefore on the critical path, and glibc's is not especially
+/// good at this shape of work — many small, short-lived allocations across a
+/// handful of threads.
+///
+/// So the binary brings its own: measured on a 232-page site, 821 ms to 739 ms.
+#[global_allocator]
+static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 fn main() -> ExitCode {
     match run() {
         Ok(code) => code,

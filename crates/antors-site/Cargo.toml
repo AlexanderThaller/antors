@@ -10,7 +10,7 @@ keywords = ["antora", "asciidoc", "documentation", "static-site"]
 categories = ["text-processing"]
 
 [dependencies]
-antors-asciidoc = { workspace = true, default-features = false }
+antors-asciidoc.workspace = true
 antors-content.workspace = true
 antors-model.workspace = true
 antors-ui.workspace = true

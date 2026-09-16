@@ -4,3 +4,6 @@
 /resources/showcase/build
 /resources/showcase/.cache
 /node_modules
+result
+result-*
+.claude/worktrees/

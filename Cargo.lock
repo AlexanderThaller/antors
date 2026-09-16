@@ -20,7 +20,7 @@ checksum = "366ffbaa4442f4684d91e2cd7c5ea7c4ed8add41959a31447066e279e432b618"
 
 [[package]]
 name = "adocers-html"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "adocers-render-core",
  "asciidoc-parser",
@@ -45,7 +45,7 @@ dependencies = [
 
 [[package]]
 name = "adocers-render-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "asciidoc-parser",
  "merman",
@@ -138,6 +138,7 @@ dependencies = [
  "anyhow",
  "axum",
  "clap",
+ "mimalloc",
  "notify-debouncer-full",
  "serde",
  "tokio",
@@ -2132,6 +2133,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
+name = "libmimalloc-sys"
+version = "0.1.49"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a45a52f43e1c16f667ccfe4dd8c85b7f7c204fd5e3bf46c5b0db9a5c3c0b8e9"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2322,6 +2332,15 @@ dependencies = [
  "unicode-linebreak",
  "unicode-segmentation",
  "unicode-width",
+]
+
+[[package]]
+name = "mimalloc"
+version = "0.1.52"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d4139bb28d14ad1facf21d5eb8825051b326e172d216b39f6d31df53cc97862"
+dependencies = [
+ "libmimalloc-sys",
 ]
 
 [[package]]
@@ -3401,7 +3420,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

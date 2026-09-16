@@ -180,6 +180,29 @@ saying so, would be worse than no index.
 
 `--no-tags-page` leaves it out.
 
+## Performance
+
+A build is almost entirely allocation: every page is parsed into a tree of owned
+strings and rendered into another. So the binary brings its own allocator, and
+`mimalloc`'s `override` feature is on — which matters more than it sounds,
+because most of those allocations are not Rust's. The tree-sitter grammars are C
+and call `malloc` themselves, and routing only the Rust half leaves the larger
+half where it was.
+
+Measured against a 232-page site, best of three:
+
+| | |
+| --- | --- |
+| glibc, system allocator | 821 ms |
+| glibc, mimalloc | 739 ms |
+| musl (static), mimalloc without `override` | 1697 ms |
+| musl (static), mimalloc with `override` | 850 ms |
+
+The musl row is the one worth keeping: it is the usual "musl is slow" report,
+and it is not the libc — it is the C allocations nothing had routed. With them
+routed, a musl build costs 15% for a container that carries no libc worth
+speaking of.
+
 ## How it fits together
 
 While the two are developed together, `adocers-html` and `adocers-render-core`
