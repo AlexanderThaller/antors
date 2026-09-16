@@ -1,0 +1,105 @@
+= Blocks
+:navtitle: Blocks
+
+== Admonitions
+
+NOTE: A note, in its one-line form.
+
+TIP: A tip.
+
+IMPORTANT: Something important.
+
+CAUTION: Proceed carefully.
+
+WARNING: Do not proceed.
+
+[NOTE]
+====
+A note in block form, so it can hold more than a paragraph.
+
+* Including a list.
+* And another item.
+====
+
+[IMPORTANT]
+.A titled admonition
+====
+The title sits above the icon column.
+====
+
+== Sidebar
+
+.A sidebar with a title
+****
+A sidebar holds an aside that would break the flow of the main text.
+
+It can contain other blocks:
+
+TIP: Even an admonition.
+****
+
+== Quotes
+
+[quote,Ward Cunningham,Wiki Design Principles]
+____
+A wiki is the simplest online database that could possibly work.
+____
+
+[quote,Attribution only]
+A short quote, written as a paragraph rather than a block.
+
+[verse,Carl Sandburg,Fog]
+____
+The fog comes
+on little cat feet.
+____
+
+== Examples
+
+.An example block
+====
+An example block is how the docs show what something produces.
+====
+
+.A collapsible block
+[%collapsible]
+====
+This starts collapsed and opens when clicked.
+====
+
+== Literal and listing
+
+ An indented line is a literal block.
+
+....
+A literal block, delimited.
+  Whitespace is kept exactly.
+....
+
+----
+A listing block. {product-name} is not substituted here.
+----
+
+[subs="attributes"]
+----
+A listing block with attributes on: {product-name}.
+----
+
+== Open block
+
+--
+An open block groups content without implying anything about it.
+--
+
+[sidebar]
+--
+An open block can also masquerade as another kind.
+--
+
+== Block with metadata
+
+[#block-with-id.a-role%nowrap]
+.A titled paragraph
+Paragraphs take an id, roles and options like any other block.
+
+A reference to it: <<block-with-id>>.

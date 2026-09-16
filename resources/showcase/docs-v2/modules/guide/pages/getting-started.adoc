@@ -1,0 +1,25 @@
+= Getting started
+:navtitle: Getting started
+
+This page lives in the `guide` module, which is why its URL has `/guide/` in it.
+
+include::ROOT:partial$shared-warning.adoc[]
+
+== Install
+
+[source,bash]
+----
+cargo install antors
+----
+
+== Build
+
+[source,bash]
+----
+antors build antora-playbook.yml
+----
+
+== Next
+
+Read xref:configuration.adoc[] next, or go back to
+xref:ROOT:index.adoc[the introduction].

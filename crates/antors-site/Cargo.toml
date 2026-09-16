@@ -1,0 +1,26 @@
+[package]
+name = "antors-site"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Build an Antora documentation site from a playbook"
+keywords = ["antora", "asciidoc", "documentation", "static-site"]
+categories = ["text-processing"]
+
+[dependencies]
+antors-asciidoc = { workspace = true, default-features = false }
+antors-content.workspace = true
+antors-model.workspace = true
+antors-ui.workspace = true
+thiserror.workspace = true
+
+[features]
+default = ["highlight", "math", "mermaid"]
+highlight = ["antors-asciidoc/highlight"]
+math = ["antors-asciidoc/math"]
+mermaid = ["antors-asciidoc/mermaid"]
+
+[lints]
+workspace = true

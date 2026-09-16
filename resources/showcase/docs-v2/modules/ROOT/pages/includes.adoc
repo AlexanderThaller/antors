@@ -1,0 +1,51 @@
+= Includes
+:navtitle: Includes
+
+An `include::` in Antora names a resource ID, not a path on disk.
+
+== A partial
+
+include::partial$shared-warning.adoc[]
+
+== A partial with attributes
+
+The partial below reads `product-name` and `release-version` from the component
+descriptor:
+
+include::partial$attributes-table.adoc[]
+
+== A partial at an offset
+
+include::partial$nested-section.adoc[leveloffset=+1]
+
+== Back at the top level
+
+The `leveloffset` above applies only to the included file.
+
+== An example file
+
+[source,yaml]
+----
+include::example$playbook.yml[]
+----
+
+== Includes inside other blocks
+
+.A sidebar holding an include
+****
+include::partial$shared-warning.adoc[]
+****
+
+== Conditionals
+
+ifdef::product-name[]
+This line appears because `product-name` is set.
+endif::[]
+
+ifndef::not-set-anywhere[]
+This line appears because `not-set-anywhere` is not.
+endif::[]
+
+ifeval::["{release-version}" == "2.0.3"]
+This line appears because the version matches.
+endif::[]

@@ -1,0 +1,1482 @@
+/* antors default UI.
+ *
+ * The layout and the class names are Antora's, so a reader who knows one site
+ * knows this one; the colors and the type are this stylesheet's own. Everything
+ * is driven by the custom properties at the top, which is where to start if you
+ * want a site that looks like yours rather than like this.
+ */
+
+:root {
+  --color-text: #232629;
+  --color-muted: #5b6168;
+  --color-faint: #8a9199;
+  --color-link: #1a62b8;
+  --color-link-hover: #12467f;
+  --color-background: #ffffff;
+  --color-sunken: #f5f6f7;
+  --color-border: #dfe2e5;
+  --color-border-strong: #c4c9ce;
+
+  --color-navbar: #1c2430;
+  --color-navbar-text: #e8eaed;
+  --color-navbar-muted: #9aa4b1;
+
+  --color-accent: #1a62b8;
+  --color-accent-soft: #e8f0fb;
+
+  --color-note: #1a62b8;
+  --color-tip: #16794a;
+  --color-important: #b3261e;
+  --color-caution: #8b5cf6;
+  --color-warning: #a35c00;
+
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", "Menlo",
+    "Consolas", "Liberation Mono", monospace;
+
+  --navbar-height: 3.25rem;
+  --toolbar-height: 2.75rem;
+  --nav-width: 16rem;
+  --toc-width: 12.5rem;
+  --doc-max-width: 46rem;
+
+  --radius: 4px;
+  --shadow: 0 2px 8px rgba(16, 22, 30, 0.12);
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-text: #dfe3e8;
+    --color-muted: #9aa4b1;
+    --color-faint: #6b747f;
+    --color-link: #6aa9f0;
+    --color-link-hover: #96c4f7;
+    --color-background: #14181d;
+    --color-sunken: #1b2027;
+    --color-border: #2c333c;
+    --color-border-strong: #3c444f;
+
+    --color-navbar: #0f1419;
+    --color-navbar-text: #e8eaed;
+    --color-navbar-muted: #8a939f;
+
+    --color-accent: #6aa9f0;
+    --color-accent-soft: #1b2733;
+
+    --color-note: #6aa9f0;
+    --color-tip: #4ec08a;
+    --color-important: #f2736a;
+    --color-caution: #b79cf8;
+    --color-warning: #d8a039;
+
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-padding-top: calc(var(--navbar-height) + var(--toolbar-height) + 1rem);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+a {
+  color: var(--color-link);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-link-hover);
+  text-decoration: underline;
+}
+
+/* ---- navbar --------------------------------------------------------- */
+
+.header {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 30;
+  height: var(--navbar-height);
+  background: var(--color-navbar);
+}
+
+.navbar {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  padding: 0 1rem;
+  color: var(--color-navbar-text);
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+}
+
+.navbar-brand .navbar-item {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.navbar-item {
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  color: var(--color-navbar-text);
+  white-space: nowrap;
+}
+
+.navbar-item:first-child {
+  padding-left: 0;
+}
+
+.navbar-item:hover {
+  color: #fff;
+  text-decoration: none;
+}
+
+.navbar-menu {
+  display: flex;
+  align-items: stretch;
+}
+
+.navbar-end {
+  display: flex;
+  align-items: stretch;
+}
+
+.navbar-end .navbar-item {
+  color: var(--color-navbar-muted);
+  font-size: 0.875rem;
+}
+
+.navbar-burger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 2.5rem;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.navbar-burger span {
+  display: block;
+  height: 2px;
+  background: var(--color-navbar-text);
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+/* ---- the two columns and the article between them -------------------- */
+
+.body {
+  display: flex;
+  align-items: flex-start;
+  margin-top: var(--navbar-height);
+  min-height: calc(100vh - var(--navbar-height));
+}
+
+.nav-container {
+  position: sticky;
+  top: var(--navbar-height);
+  flex: 0 0 var(--nav-width);
+  width: var(--nav-width);
+  height: calc(100vh - var(--navbar-height));
+  border-right: 1px solid var(--color-border);
+  background: var(--color-sunken);
+}
+
+.nav {
+  height: 100%;
+  overflow: hidden;
+}
+
+.panels {
+  position: relative;
+  height: 100%;
+}
+
+/* ---- navigation menu -------------------------------------------------- */
+
+.nav-panel-menu,
+.nav-panel-explore {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.25rem 0 3rem;
+}
+
+.nav-panel-explore {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: var(--color-sunken);
+}
+
+.nav-panel-explore.is-active {
+  display: block;
+}
+
+.nav-menu {
+  font-size: 0.9375rem;
+}
+
+.nav-menu > .title {
+  margin: 0 0 0.75rem;
+  padding: 0 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-faint);
+}
+
+.nav-menu > .title a {
+  color: inherit;
+}
+
+.nav-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Each level is indented by the same step, which is applied to the list
+ * rather than to the item so a group heading and the pages under it line up
+ * with each other rather than with the toggle beside them. */
+.nav-list .nav-list {
+  margin-left: 0.75rem;
+  border-left: 1px solid var(--color-border);
+}
+
+.nav-item {
+  position: relative;
+}
+
+/* A list that is not on the path to the page being read starts closed. The
+ * toggle flips `is-open`, so a reader who opens a branch keeps it open while
+ * they move around inside it. */
+.nav-item > .nav-list {
+  display: none;
+}
+
+.nav-item.is-open > .nav-list {
+  display: block;
+}
+
+.nav-link,
+.nav-text {
+  display: block;
+  padding: 0.3rem 1.25rem 0.3rem 1.25rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.nav-list .nav-list .nav-link,
+.nav-list .nav-list .nav-text {
+  padding-left: 0.75rem;
+}
+
+.nav-text {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.nav-link:hover {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.nav-item.is-current-page > .nav-link {
+  color: var(--color-accent);
+  font-weight: 600;
+  background: var(--color-accent-soft);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+.nav-item-toggle {
+  position: absolute;
+  top: 0.3rem;
+  left: 0.15rem;
+  width: 1.1rem;
+  height: 1.3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--color-faint);
+}
+
+.nav-list .nav-list .nav-item-toggle {
+  left: -0.6rem;
+}
+
+.nav-item-toggle::before {
+  content: "";
+  display: block;
+  width: 0.4rem;
+  height: 0.4rem;
+  margin: 0.4rem auto;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+.nav-item.is-open > .nav-item-toggle::before {
+  transform: rotate(45deg);
+}
+
+/* ---- explore panel ---------------------------------------------------- */
+
+.nav-panel-explore .context {
+  display: flex;
+  flex-direction: column;
+  padding: 0 1.25rem 0.75rem 2.25rem;
+  position: relative;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 0.75rem;
+}
+
+.nav-panel-explore .context .title {
+  font-weight: 600;
+}
+
+.nav-panel-explore .back {
+  position: absolute;
+  top: 0.15rem;
+  left: 0.9rem;
+  width: 1rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-faint);
+  cursor: pointer;
+}
+
+.nav-panel-explore .back::before {
+  content: "";
+  display: block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin: 0.35rem auto;
+  border-left: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.nav-panel-explore .back:hover {
+  color: var(--color-text);
+}
+
+.nav-panel-explore .context .version {
+  font-size: 0.8125rem;
+  color: var(--color-faint);
+}
+
+.components {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+}
+
+.components .component {
+  padding: 0.35rem 1.25rem;
+}
+
+.components .component > .title {
+  font-weight: 600;
+}
+
+.components .component.is-current > .title a {
+  color: var(--color-accent);
+}
+
+.components .versions {
+  margin: 0.15rem 0 0;
+  padding: 0 0 0 0.75rem;
+  list-style: none;
+  border-left: 1px solid var(--color-border);
+}
+
+.components .versions .version a {
+  display: block;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-muted);
+}
+
+.components .versions .version.is-current a {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* ---- toolbar ---------------------------------------------------------- */
+
+main.article {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbar {
+  position: sticky;
+  top: var(--navbar-height);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: var(--toolbar-height);
+  padding: 0 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background);
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
+.nav-toggle {
+  display: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--color-muted);
+}
+
+.nav-toggle::before {
+  content: "";
+  display: block;
+  width: 1rem;
+  height: 0.125rem;
+  margin: 0 auto;
+  background: currentColor;
+  box-shadow: 0 -0.3rem 0 currentColor, 0 0.3rem 0 currentColor;
+}
+
+.home-link {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  opacity: 0.55;
+  -webkit-mask: var(--home-icon) center / contain no-repeat;
+  mask: var(--home-icon) center / contain no-repeat;
+  --home-icon: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3 2 11h3v10h5v-6h4v6h5V11h3Z"/></svg>');
+}
+
+.home-link:hover,
+.home-link.is-current {
+  opacity: 1;
+  color: var(--color-accent);
+}
+
+.breadcrumbs {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.breadcrumbs ul {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.breadcrumbs li + li::before {
+  content: "/";
+  margin: 0 0.4rem;
+  color: var(--color-faint);
+}
+
+.breadcrumbs a {
+  color: var(--color-muted);
+}
+
+.breadcrumbs li:last-child {
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- version selector -------------------------------------------------- */
+
+.page-versions {
+  position: relative;
+  flex: none;
+}
+
+.version-menu-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-background);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.version-menu-toggle::after {
+  content: "";
+  width: 0.35rem;
+  height: 0.35rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.version-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 10;
+  min-width: 100%;
+  padding: 0.25rem 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-background);
+  box-shadow: var(--shadow);
+}
+
+.page-versions.is-open .version-menu {
+  display: block;
+}
+
+.version-menu .version {
+  display: block;
+  padding: 0.25rem 0.9rem;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.version-menu .version:hover {
+  background: var(--color-sunken);
+  text-decoration: none;
+}
+
+.version-menu .version.is-current {
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+/* A version that does not have this page leads to its start page instead,
+ * and says so rather than looking like the same page somewhere else. */
+.version-menu .version.is-missing {
+  color: var(--color-faint);
+  font-style: italic;
+}
+
+.edit-this-page {
+  flex: none;
+}
+
+.edit-this-page a {
+  color: var(--color-muted);
+}
+
+/* ---- content and outline ------------------------------------------------ */
+
+/* `main.article > .content` and not `.content`: Asciidoctor uses that class
+ * inside an admonition, a listing and an image block too, and a layout rule
+ * that reached those would lay the *contents of a note* out as a two-column
+ * page. */
+main.article > .content {
+  display: grid;
+  /* `1fr` rather than the max width: with the container capped and centred,
+   * the article fills what is left, so a short line does not leave the
+   * outline drifting in towards the middle of the page. */
+  grid-template-columns: minmax(0, 1fr) var(--toc-width);
+  align-items: start;
+  column-gap: 2.5rem;
+  max-width: calc(var(--doc-max-width) + var(--toc-width) + 5.5rem);
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+}
+
+/* Placed rather than ordered, so the outline can come first in the markup —
+ * where a reader using a screen reader meets it before the article rather than
+ * after it — and still be drawn beside it. */
+/* A page with no headings has no outline, and a reserved-but-empty column
+ * would push the article off to one side for no reason. */
+main.article > .content:not(:has(> .toc.sidebar)) {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: calc(var(--doc-max-width) + 3rem);
+}
+
+main.article > .content > .toc.sidebar {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+main.article > .content > article.doc {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.toc.sidebar {
+  position: sticky;
+  top: calc(var(--navbar-height) + var(--toolbar-height));
+  width: var(--toc-width);
+  max-height: calc(100vh - var(--navbar-height) - var(--toolbar-height));
+  overflow-y: auto;
+  padding: 2rem 0 2rem;
+  font-size: 0.8125rem;
+}
+
+.toc-menu h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-faint);
+}
+
+.toc-menu ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc-menu ul ul {
+  padding-left: 0.75rem;
+}
+
+.toc-menu a {
+  display: block;
+  padding: 0.15rem 0 0.15rem 0.6rem;
+  border-left: 2px solid transparent;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.toc-menu a:hover {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.toc-menu a.is-active {
+  border-left-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+article.doc {
+  min-width: 0;
+  padding: 1.5rem 0 0;
+}
+
+/* `page-role: -toc` is how a page says it wants the full width. The role
+ * reaches the `body`, so the whole grid collapses to one column rather than
+ * leaving an empty track where the outline was. */
+body.-toc main.article > .content {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: calc(var(--doc-max-width) + 3rem);
+}
+
+body.-toc .toc.sidebar {
+  display: none;
+}
+
+/* ---- the article itself -------------------------------------------------- */
+
+.doc h1,
+.doc h2,
+.doc h3,
+.doc h4,
+.doc h5,
+.doc h6 {
+  margin: 2rem 0 0.75rem;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  scroll-margin-top: calc(var(--navbar-height) + var(--toolbar-height) + 1rem);
+}
+
+.doc h1.page {
+  margin: 0.5rem 0 1.5rem;
+  font-size: 2.125rem;
+}
+
+.doc h2 {
+  margin-top: 2.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 1.5rem;
+}
+
+.doc h3 { font-size: 1.25rem; }
+.doc h4 { font-size: 1.0625rem; }
+.doc h5 { font-size: 1rem; }
+.doc h6 { font-size: 0.9375rem; color: var(--color-muted); }
+
+.doc .subtitle {
+  display: block;
+  font-size: 0.6em;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+/* The anchor beside a heading appears on hover, which keeps a permalink
+ * available without putting a symbol in front of every title. */
+.doc .anchor {
+  position: absolute;
+  margin-left: -1.1em;
+  width: 1.1em;
+  opacity: 0;
+  text-align: left;
+  font-weight: 400;
+  color: var(--color-faint);
+}
+
+.doc .anchor::before {
+  content: "#";
+}
+
+.doc h1:hover .anchor,
+.doc h2:hover .anchor,
+.doc h3:hover .anchor,
+.doc h4:hover .anchor,
+.doc h5:hover .anchor,
+.doc h6:hover .anchor,
+.doc .anchor:focus {
+  opacity: 1;
+  text-decoration: none;
+}
+
+.doc p,
+.doc dl,
+.doc ol,
+.doc ul {
+  margin: 0 0 1rem;
+}
+
+.doc .paragraph,
+.doc .ulist,
+.doc .olist,
+.doc .dlist,
+.doc .hdlist,
+.doc .qlist,
+.doc .listingblock,
+.doc .literalblock,
+.doc .admonitionblock,
+.doc .exampleblock,
+.doc .sidebarblock,
+.doc .quoteblock,
+.doc .verseblock,
+.doc .imageblock,
+.doc .videoblock,
+.doc .audioblock,
+.doc .tableblock,
+.doc table.tableblock,
+.doc .openblock,
+.doc .colist,
+.doc details {
+  margin: 0 0 1.25rem;
+}
+
+.doc .lead p,
+.doc p.lead {
+  font-size: 1.125rem;
+  color: var(--color-muted);
+}
+
+.doc ul,
+.doc ol {
+  padding-left: 1.5rem;
+}
+
+.doc li > p:last-child {
+  margin-bottom: 0;
+}
+
+.doc li .ulist,
+.doc li .olist,
+.doc li .dlist {
+  margin: 0.35rem 0;
+}
+
+.doc dl dt {
+  font-weight: 650;
+  margin-top: 0.75rem;
+}
+
+.doc dl dd {
+  margin: 0 0 0 1.5rem;
+}
+
+/* A horizontal description list is a two-column table in Asciidoctor's
+ * markup, and is laid out as one here rather than restyled into something
+ * else. */
+.doc .hdlist table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.doc .hdlist td {
+  padding: 0.25rem 1rem 0.25rem 0;
+  vertical-align: top;
+}
+
+.doc .hdlist td.hdlist1 {
+  width: 1px;
+  white-space: nowrap;
+  font-weight: 650;
+}
+
+/* The checklist marker is a character rather than an icon, so the bullet is
+ * removed and the character takes its place. */
+.doc ul.checklist {
+  padding-left: 0.5rem;
+  list-style: none;
+}
+
+.doc .qlist.qanda > ol {
+  padding-left: 1.5rem;
+}
+
+.doc .qlist.qanda > ol > li > p:first-child {
+  font-weight: 650;
+}
+
+.doc blockquote {
+  margin: 0;
+}
+
+.doc .title {
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: var(--color-muted);
+}
+
+/* ---- code ---------------------------------------------------------------- */
+
+.doc code,
+.doc kbd,
+.doc samp {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+.doc p code,
+.doc li code,
+.doc td code,
+.doc dt code,
+.doc h1 code,
+.doc h2 code,
+.doc h3 code,
+.doc h4 code {
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  background: var(--color-sunken);
+  border: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.doc pre {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-sunken);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  overflow-x: auto;
+}
+
+/* The listing is scrollable, so it is focusable — and a focus ring that is
+ * only visible on keyboard focus keeps it from appearing on every click. */
+.doc pre:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.doc pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+  white-space: pre;
+}
+
+.doc .listingblock .content,
+.doc .literalblock .content {
+  position: relative;
+}
+
+/* ---- callouts -------------------------------------------------------------
+ *
+ * The back end renders a callout list as an ordered list rather than as
+ * Asciidoctor's two-column table, so the numbers come from the list and line
+ * up with the circled numbers in the listing above.
+ */
+
+.doc .conum[data-value] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15em;
+  height: 1.15em;
+  border-radius: 50%;
+  background: var(--color-muted);
+  color: var(--color-background);
+  font-family: var(--font-body);
+  font-size: 0.75em;
+  font-style: normal;
+  line-height: 1;
+}
+
+.doc .conum[data-value]::after {
+  content: attr(data-value);
+}
+
+/* The listing repeats the number in bold text beside the circle so that a
+ * reader who copies the block still gets it. It is not for the eye. */
+.doc .conum[data-value] + b {
+  display: none;
+}
+
+.doc .colist {
+  font-size: 0.9375rem;
+  color: var(--color-muted);
+}
+
+.doc .colist ol {
+  padding-left: 1.5rem;
+}
+
+.doc .colist ol li::marker {
+  font-weight: 650;
+  color: var(--color-text);
+}
+
+/* Asciidoctor's own table form, for a build that emits it. */
+.doc .colist > table {
+  border-collapse: collapse;
+}
+
+.doc .colist > table td {
+  padding: 0.15rem 0.5rem 0.15rem 0;
+  vertical-align: top;
+}
+
+/* ---- admonitions ----------------------------------------------------------
+ *
+ * The back end marks an admonition with an inline SVG rather than with a font
+ * icon, so the icon cell is sized for a drawing and colored through
+ * `currentColor`.
+ */
+
+.doc .admonitionblock > table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.doc .admonitionblock td.icon {
+  width: 3rem;
+  padding: 0.9rem 0 0.9rem 0.9rem;
+  vertical-align: top;
+  text-align: center;
+}
+
+.doc .admonitionblock td.icon svg.icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.doc .admonitionblock td.icon .title {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.doc .admonitionblock td.content {
+  padding: 0.9rem 1rem;
+}
+
+.doc .admonitionblock td.content > :last-child {
+  margin-bottom: 0;
+}
+
+.doc .admonitionblock {
+  border: 1px solid var(--color-border);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  background: var(--color-sunken);
+}
+
+.doc .admonitionblock.note { border-left-color: var(--color-note); }
+.doc .admonitionblock.tip { border-left-color: var(--color-tip); }
+.doc .admonitionblock.important { border-left-color: var(--color-important); }
+.doc .admonitionblock.caution { border-left-color: var(--color-caution); }
+.doc .admonitionblock.warning { border-left-color: var(--color-warning); }
+
+.doc .admonitionblock.note td.icon { color: var(--color-note); }
+.doc .admonitionblock.tip td.icon { color: var(--color-tip); }
+.doc .admonitionblock.important td.icon { color: var(--color-important); }
+.doc .admonitionblock.caution td.icon { color: var(--color-caution); }
+.doc .admonitionblock.warning td.icon { color: var(--color-warning); }
+
+/* ---- example, sidebar, quote --------------------------------------------- */
+
+.doc .exampleblock > .content,
+.doc details > .content {
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-background);
+}
+
+.doc .exampleblock > .content > :last-child,
+.doc details > .content > :last-child,
+.doc .sidebarblock > .content > :last-child {
+  margin-bottom: 0;
+}
+
+.doc details > summary.title {
+  cursor: pointer;
+  padding: 0.35rem 0;
+  color: var(--color-text);
+}
+
+.doc .sidebarblock {
+  padding: 1.15rem 1.35rem;
+  border-radius: var(--radius);
+  background: var(--color-sunken);
+  border: 1px solid var(--color-border);
+}
+
+.doc .sidebarblock > .content > .title {
+  font-size: 1.0625rem;
+  color: var(--color-text);
+}
+
+.doc .quoteblock,
+.doc .verseblock {
+  padding-left: 1.15rem;
+  border-left: 3px solid var(--color-border-strong);
+  color: var(--color-muted);
+}
+
+.doc .verseblock pre {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.doc .attribution,
+.doc .quoteblock .attribution {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-faint);
+}
+
+/* ---- tables --------------------------------------------------------------- */
+
+.doc table.tableblock {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.doc table.tableblock caption,
+.doc table.tableblock > caption {
+  margin-bottom: 0.35rem;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: var(--color-muted);
+}
+
+.doc table.tableblock th,
+.doc table.tableblock td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+.doc table.tableblock thead th {
+  border-bottom-width: 2px;
+  background: var(--color-sunken);
+  text-align: left;
+  font-weight: 650;
+}
+
+.doc table.tableblock tfoot tr {
+  background: var(--color-sunken);
+  font-weight: 650;
+}
+
+.doc table.tableblock p {
+  margin: 0;
+}
+
+.doc table.tableblock p + p {
+  margin-top: 0.5rem;
+}
+
+.doc .tableblock.frame-none th,
+.doc .tableblock.frame-none td { border-width: 0 1px; }
+
+.doc .tableblock.grid-none th,
+.doc .tableblock.grid-none td { border-width: 0; }
+
+.doc .tableblock.grid-rows th,
+.doc .tableblock.grid-rows td { border-width: 1px 0; }
+
+.doc .tableblock.grid-cols th,
+.doc .tableblock.grid-cols td { border-width: 0 1px; }
+
+.doc .tableblock tbody tr:nth-child(even),
+.doc .stripes-even tbody tr:nth-child(even) { background: var(--color-sunken); }
+
+.doc .halign-center { text-align: center; }
+.doc .halign-right { text-align: right; }
+.doc .valign-middle { vertical-align: middle; }
+.doc .valign-bottom { vertical-align: bottom; }
+
+/* ---- media ---------------------------------------------------------------- */
+
+.doc img,
+.doc svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.doc .imageblock.text-center,
+.doc .imageblock.text-center > .content {
+  text-align: center;
+}
+
+.doc .imageblock > .title,
+.doc .videoblock > .title {
+  margin-top: 0.4rem;
+  margin-bottom: 0;
+}
+
+.doc span.image img {
+  vertical-align: middle;
+}
+
+.doc span.image.right {
+  float: right;
+  margin-left: 1rem;
+}
+
+.doc span.image.left {
+  float: left;
+  margin-right: 1rem;
+}
+
+.doc .videoblock iframe,
+.doc .videoblock video {
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius);
+}
+
+/* ---- inline odds and ends -------------------------------------------------- */
+
+.doc mark,
+.doc .highlight-text {
+  padding: 0 0.15em;
+  background: #fff3b0;
+  color: #232629;
+  border-radius: 2px;
+}
+
+.doc kbd {
+  display: inline-block;
+  padding: 0.05em 0.4em;
+  border: 1px solid var(--color-border-strong);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  background: var(--color-sunken);
+  font-size: 0.75em;
+  line-height: 1.5;
+}
+
+.doc .keyseq {
+  white-space: nowrap;
+}
+
+.doc .menuseq .caret {
+  margin: 0 0.25em;
+  color: var(--color-faint);
+}
+
+.doc .menuseq b {
+  font-weight: 650;
+}
+
+.doc button.button,
+.doc b.button {
+  padding: 0.05em 0.5em;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 3px;
+  background: var(--color-sunken);
+  font-size: 0.875em;
+  font-weight: 500;
+}
+
+.doc .underline { text-decoration: underline; }
+.doc .line-through { text-decoration: line-through; }
+.doc .nowrap { white-space: nowrap; }
+
+.doc hr,
+.doc .thematic-break {
+  height: 0;
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.doc .footnotes {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.875rem;
+  color: var(--color-muted);
+}
+
+.doc a.xref.attachment::after {
+  content: "";
+  display: inline-block;
+  width: 0.7em;
+  height: 0.8em;
+  margin-left: 0.25em;
+  background: currentColor;
+  -webkit-mask: var(--file-icon) center / contain no-repeat;
+  mask: var(--file-icon) center / contain no-repeat;
+  --file-icon: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 2H6v20h12V6Zm0 0 4 4h-4Z"/></svg>');
+}
+
+/* ---- syntax highlighting ---------------------------------------------------
+ *
+ * The back end highlights while the site is built, with tree-sitter, and emits
+ * these classes. Nothing is highlighted in the browser, so a reader with
+ * scripting off sees the same colors.
+ */
+
+.hl-keyword { color: #a626a4; }
+.hl-string { color: #50a14f; }
+.hl-comment { color: #a0a1a7; font-style: italic; }
+.hl-function { color: #4078f2; }
+.hl-type { color: #c18401; }
+.hl-constant,
+.hl-number { color: #986801; }
+.hl-variable { color: #e45649; }
+.hl-property,
+.hl-attr { color: #986801; }
+.hl-operator,
+.hl-punctuation { color: #5b6168; }
+.hl-tag { color: #e45649; }
+.hl-parameter { color: #383a42; }
+.hl-label { color: #a626a4; }
+.hl-escape { color: #0184bc; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hl-keyword { color: #c678dd; }
+  :root:not([data-theme="light"]) .hl-string { color: #98c379; }
+  :root:not([data-theme="light"]) .hl-comment { color: #6b747f; }
+  :root:not([data-theme="light"]) .hl-function { color: #61afef; }
+  :root:not([data-theme="light"]) .hl-type { color: #e5c07b; }
+  :root:not([data-theme="light"]) .hl-constant,
+  :root:not([data-theme="light"]) .hl-number { color: #d19a66; }
+  :root:not([data-theme="light"]) .hl-variable { color: #e06c75; }
+  :root:not([data-theme="light"]) .hl-property,
+  :root:not([data-theme="light"]) .hl-attr { color: #d19a66; }
+  :root:not([data-theme="light"]) .hl-operator,
+  :root:not([data-theme="light"]) .hl-punctuation { color: #9aa4b1; }
+  :root:not([data-theme="light"]) .hl-tag { color: #e06c75; }
+  :root:not([data-theme="light"]) .hl-parameter { color: #dfe3e8; }
+  :root:not([data-theme="light"]) .hl-label { color: #c678dd; }
+  :root:not([data-theme="light"]) .hl-escape { color: #56b6c2; }
+  :root:not([data-theme="light"]) .doc mark { background: #665c1e; color: #f0e6c0; }
+}
+
+/* ---- copy button ----------------------------------------------------------- */
+
+.doc .listingblock .content > .copy {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 3px;
+  background: var(--color-background);
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 0.6875rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.doc .listingblock:hover .copy,
+.doc .listingblock .copy:focus-visible {
+  opacity: 1;
+}
+
+/* ---- pagination and footer --------------------------------------------------- */
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.9375rem;
+}
+
+.pagination .prev::before {
+  content: "\2190\00a0";
+  color: var(--color-faint);
+}
+
+.pagination .next {
+  margin-left: auto;
+  text-align: right;
+}
+
+.pagination .next::after {
+  content: "\00a0\2192";
+  color: var(--color-faint);
+}
+
+.footer {
+  padding: 1.5rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-sunken);
+  font-size: 0.8125rem;
+  color: var(--color-faint);
+  text-align: center;
+}
+
+.footer p {
+  margin: 0;
+}
+
+/* ---- narrow screens ------------------------------------------------------------ */
+
+@media screen and (max-width: 1200px) {
+  main.article > .content {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: calc(var(--doc-max-width) + 3rem);
+  }
+
+  .toc.sidebar {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .navbar-burger {
+    display: flex;
+  }
+
+  .navbar-menu {
+    display: none;
+    position: absolute;
+    top: var(--navbar-height);
+    right: 0;
+    left: 0;
+    flex-direction: column;
+    padding: 0.5rem 1rem;
+    background: var(--color-navbar);
+    box-shadow: var(--shadow);
+  }
+
+  .navbar-menu.is-active {
+    display: flex;
+  }
+
+  .navbar-end {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nav-toggle {
+    display: block;
+  }
+
+  .nav-container {
+    position: fixed;
+    top: var(--navbar-height);
+    bottom: 0;
+    left: 0;
+    z-index: 25;
+    transform: translateX(-100%);
+    transition: transform 0.18s ease;
+    box-shadow: var(--shadow);
+  }
+
+  .nav-container.is-open {
+    transform: none;
+  }
+
+  .content {
+    padding: 0 1rem 3rem;
+  }
+}
+
+@media print {
+  .header,
+  .nav-container,
+  .toolbar,
+  .footer,
+  .pagination,
+  .copy {
+    display: none !important;
+  }
+
+  .toc.sidebar {
+    display: block;
+    position: static;
+    width: auto;
+    max-height: none;
+  }
+
+  .body {
+    margin-top: 0;
+  }
+
+  article.doc {
+    max-width: none;
+  }
+}

@@ -1,0 +1,57 @@
+= Page attributes
+:navtitle: Page attributes
+:description: What the page-* namespace controls.
+:page-role: -toc
+:page-toclevels: 3
+:page-tags: antora, reference
+:page-edit-url: https://example.org/edit/page-attributes.adoc
+
+Attributes whose name starts with `page-` are *page attributes*: they are
+carried into the UI model rather than used by the converter, so a template can
+read them.
+
+== The ones the default UI reads
+
+`page-aliases`:: Other resource IDs that redirect here.
+`page-role`:: Extra classes on the `article` element. This page sets `-toc`.
+`page-toclevels`:: How deep the right-hand outline goes.
+`page-partial`:: Keeps the page's source for other versions to reuse.
+`page-edit-url`:: Overrides the computed "Edit this page" link.
+
+== The ones a custom template might read
+
+This page sets `page-tags` to `{page-tags}`, which no default template shows.
+A custom UI can put it in the toolbar.
+
+== Built-in page attributes
+
+[cols="1,2", options="header"]
+|===
+| Attribute | Value here
+
+| `page-component-name` | {page-component-name}
+| `page-component-title` | {page-component-title}
+| `page-component-version` | {page-component-version}
+| `page-version` | {page-version}
+| `page-module` | {page-module}
+| `page-relative-src-path` | {page-relative-src-path}
+| `page-component-display-version` | {page-component-display-version}
+| `page-origin-type` | {page-origin-type}
+|===
+
+== Document attributes that are not page attributes
+
+`description` and `keywords` become `<meta>` tags. `navtitle` changes what the
+navigation shows without changing the heading.
+
+== Deep headings
+
+=== Level three
+
+==== Level four
+
+===== Level five
+
+====== Level six
+
+This page sets `page-toclevels: 3`, so the outline stops at level three.

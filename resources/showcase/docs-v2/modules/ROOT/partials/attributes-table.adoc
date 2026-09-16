@@ -1,0 +1,10 @@
+[cols="1,2", options="header"]
+|===
+| Attribute | Meaning
+
+| `product-name`
+| {product-name}
+
+| `release-version`
+| {release-version}
+|===

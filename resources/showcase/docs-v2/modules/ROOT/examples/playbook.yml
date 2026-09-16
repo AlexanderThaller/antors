@@ -1,0 +1,11 @@
+# tag::site[]
+site:
+  title: Antors Showcase
+  url: https://example.org/showcase
+# end::site[]
+# tag::content[]
+content:
+  sources:
+    - url: ../..
+      branches: HEAD
+# end::content[]

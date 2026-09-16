@@ -1,0 +1,73 @@
+= Resource IDs and xrefs
+:navtitle: Resource IDs
+
+Antora addresses every file by a *resource ID*:
+
+[listing]
+----
+version@component:module:family$relative/path.ext
+----
+
+Every part but the path is optional, and an omitted part is taken from the page
+that holds the reference.
+
+== Page references
+
+[cols="2,3", options="header"]
+|===
+| Written | Resolves to
+
+| `xref:blocks.adoc[]`
+| xref:blocks.adoc[] — same module
+
+| `xref:blocks.adoc#sidebar[]`
+| xref:blocks.adoc#sidebar[a section of it]
+
+| `xref:guide:getting-started.adoc[]`
+| xref:guide:getting-started.adoc[] — another module
+
+| `xref:api:errors.adoc[]`
+| xref:api:errors.adoc[] — another module again
+
+| `xref:sidecar::index.adoc[]`
+| xref:sidecar::index.adoc[] — another component
+
+| `xref:1.0@showcase:ROOT:legacy.adoc[]`
+| xref:1.0@showcase:ROOT:legacy.adoc[] — another version
+
+| `xref:ROOT:index.adoc[]`
+| xref:ROOT:index.adoc[] — an explicit module
+
+| `xref:index.adoc#attributes[]`
+| xref:index.adoc#attributes[a fragment of another page]
+|===
+
+== References within the page
+
+A section on this page: <<within-the-page>>.
+
+The same, with text: <<within-the-page,named differently>>.
+
+The `xref` macro form: xref:within-the-page[].
+
+[#within-the-page]
+== Within the page
+
+This section is the target of the references above.
+
+== An alias
+
+xref:index.adoc[] declares `page-aliases: home.adoc, start.adoc`, so
+`home.html` and `start.html` are written as redirects to it.
+
+== Natural cross references
+
+A reference by title rather than by id: <<Within the page>>.
+
+== Deep links
+
+A link to a file that is not a page:
+xref:attachment$report.pdf[the report] — an attachment.
+
+An external link: https://docs.antora.org/antora/latest/page/xref/[the xref
+documentation^].

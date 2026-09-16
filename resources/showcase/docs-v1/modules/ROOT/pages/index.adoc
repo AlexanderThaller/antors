@@ -1,0 +1,13 @@
+= Antors Showcase
+:description: The 1.0 line.
+
+This is version *1.0* of the same component. Opening it shows the banner the
+default UI puts above an older version, and the version selector switches back
+to xref:2.0@showcase:ROOT:index.adoc[2.0].
+
+Release: {release-version}.
+
+== What changed
+
+The 1.0 line had one module and no API reference. See
+xref:legacy.adoc[the legacy notes].

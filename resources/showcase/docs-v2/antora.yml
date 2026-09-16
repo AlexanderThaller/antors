@@ -1,0 +1,15 @@
+name: showcase
+title: Showcase
+version: '2.0'
+display_version: '2.0 (current)'
+start_page: ROOT:index.adoc
+nav:
+  - modules/ROOT/nav.adoc
+  - modules/guide/nav.adoc
+  - modules/api/nav.adoc
+asciidoc:
+  attributes:
+    product-name: 'Antors'
+    # `@` makes it a soft default the page may override.
+    release-version: '2.0.3@'
+    url-project: 'https://github.com/AlexanderThaller/antors'

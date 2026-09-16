@@ -1,0 +1,94 @@
+= Tables
+:navtitle: Tables
+
+== Basic
+
+|===
+| Name | Type | Default
+
+| `title`
+| String
+| none
+
+| `version`
+| String
+| required
+|===
+
+== Columns and headers
+
+.A table with a caption
+[cols="1,2,1", options="header,footer"]
+|===
+| Key | Meaning | Since
+
+| `url`
+| Where the content lives
+| 1.0
+
+| `branches`
+| Which refs to read
+| 1.0
+
+| Total
+| 2 keys
+|
+|===
+
+== Spans and alignment
+
+[cols="3*^", options="header"]
+|===
+| Left | Middle | Right
+
+3+| A cell spanning three columns
+
+.2+| A cell spanning two rows
+| b
+| c
+
+| e
+| f
+|===
+
+== Cell formats
+
+[cols="1a,1d,1l,1m,1s,1e", options="header"]
+|===
+| AsciiDoc | Default | Literal | Monospace | Strong | Emphasis
+
+|
+* a list
+* inside a cell
+| plain
+| kept   as   written
+| monospace
+| strong
+| emphasis
+|===
+
+== CSV and DSV
+
+[format=csv, options="header"]
+|===
+Component,Version,Modules
+showcase,2.0,3
+showcase,1.0,1
+sidecar,,1
+|===
+
+[format=dsv, options="header"]
+|===
+Key:Value
+one:1
+two:2
+|===
+
+== Widths and framing
+
+[width="60%", frame=ends, grid=rows, stripes=even]
+|===
+| A | B
+| 1 | 2
+| 3 | 4
+|===

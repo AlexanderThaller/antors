@@ -1,0 +1,37 @@
+= Configuration
+:navtitle: Configuration
+
+[#playbook]
+== Playbook keys
+
+[cols="1,3", options="header"]
+|===
+| Key | Meaning
+
+| `site.title` | The name in the navbar.
+| `site.url` | The base URL, which makes absolute links and the sitemap possible.
+| `site.start_page` | Where `/` redirects to.
+| `content.sources` | Which repositories, branches and start paths to collect.
+| `ui.bundle.url` | The UI archive to unpack over the output.
+| `output.dir` | Where the site is written.
+|===
+
+[#component]
+== Component keys
+
+[cols="1,3", options="header"]
+|===
+| Key | Meaning
+
+| `name` | The component's identifier, used in resource IDs.
+| `title` | What the UI shows.
+| `version` | The version this source contributes.
+| `display_version` | What the version selector shows instead of `version`.
+| `start_page` | Which page the component's own name resolves to.
+| `nav` | The navigation files, in order.
+| `asciidoc.attributes` | Attributes set for every page in the component.
+|===
+
+== A reference back
+
+xref:getting-started.adoc[] comes before this page.

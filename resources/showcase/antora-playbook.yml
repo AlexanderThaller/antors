@@ -1,0 +1,44 @@
+# The playbook is the whole of an Antora build's configuration: what content to
+# collect, what UI to dress it in, and where to put the result.
+site:
+  title: Antors Showcase
+  url: https://example.org/showcase
+  start_page: showcase::index.adoc
+  robots: allow
+  keys:
+    google_analytics: ''
+
+content:
+  sources:
+    # `url: ../..` is this repository; `HEAD` means the current worktree, so an
+    # edit shows up without a commit.
+    - url: ../..
+      branches: HEAD
+      start_paths:
+        - resources/showcase/docs-v2
+        - resources/showcase/docs-v1
+        - resources/showcase/other
+
+ui:
+  bundle:
+    url: https://gitlab.com/antora/antora-ui-default/-/jobs/artifacts/HEAD/raw/build/ui-bundle.zip?job=bundle-stable
+    snapshot: true
+
+asciidoc:
+  attributes:
+    experimental: ''
+    idprefix: ''
+    idseparator: '-'
+    page-pagination: ''
+    source-highlighter: highlight.js
+    kbd-macro: enabled
+
+output:
+  dir: ./build/antora
+
+runtime:
+  cache_dir: ./.cache/antora
+  fetch: false
+  log:
+    level: warn
+    failure_level: error

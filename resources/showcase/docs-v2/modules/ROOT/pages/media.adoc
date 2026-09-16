@@ -1,0 +1,37 @@
+= Images and attachments
+:navtitle: Media
+
+== Block images
+
+image::logo.svg[The logo,200]
+
+.A captioned figure
+image::diagram.svg[A diagram,400,align=center]
+
+image::logo.svg[A linked logo,120,link=https://example.org,window=_blank]
+
+== An image from another module
+
+image::guide:screenshot.svg[A screenshot from the guide module,300]
+
+== Inline images
+
+An inline image:logo.svg[logo,24] sits in the line of text.
+
+An inline image with a role: image:logo.svg[logo,24,role=right].
+
+== Attachments
+
+A link to an attachment: xref:attachment$report.pdf[the report].
+
+The same, written as a link: link:{attachmentsdir}/report.pdf[the report].
+
+A text attachment: xref:attachment$notes.txt[some notes].
+
+== Video and audio
+
+video::300/kodak-moment[vimeo]
+
+video::https://example.org/clip.webm[width=480]
+
+audio::https://example.org/track.mp3[]

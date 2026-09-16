@@ -1,0 +1,85 @@
+= Text and inline markup
+:navtitle: Text
+
+Inline markup is rendered by the parser rather than the back end, so this page
+is mostly a check that nothing is lost on the way through.
+
+== Emphasis
+
+*bold*, _italic_, `monospace`, *_bold italic_*, `*monospace bold*`,
+#highlighted#, [.underline]#underlined#, [.line-through]#struck through#,
+^superscript^, ~subscript~.
+
+Unconstrained: **b**old, __i__talic, ``m``onospace.
+
+A custom role: [.lead]#this paragraph leads#.
+
+== Replacements
+
+(C) (R) (TM) ... -> => <- <= -- ' and "`curly quotes`" and '`single`'.
+
+Hard line break at the end of this line +
+puts the next one underneath it.
+
+[%hardbreaks]
+Every line
+in this block
+breaks.
+
+== Attributes
+
+The component sets `product-name`, so {product-name} appears here.
+A page may set its own:
+
+:page-local: a page-scoped value
+
+A counter: {counter:example-counter}, {counter:example-counter},
+{counter:example-counter}.
+
+An escaped reference stays as written: \{product-name}.
+
+== Links
+
+A bare URL: https://example.org
+
+A named link: https://example.org[Example^]
+
+A mail link: mailto:nobody@example.org[Write to nobody]
+
+A link with a role: https://example.org[Example, role=external]
+
+== Footnotes
+
+A statement that needs support.footnote:[The support goes here.]
+A second one reuses the first.footnote:reused[This one has an id.]
+And again.footnote:reused[]
+
+== Macros
+
+A keyboard shortcut: kbd:[Ctrl+Shift+P].
+
+A menu path: menu:File[Save As... > Other Format].
+
+A button: btn:[Apply].
+
+An inline anchor: [[an-anchor]]this text can be linked to.
+
+A reference back to it: <<an-anchor,the anchored text>>.
+
+== Passthrough
+
+Inline: +++<mark>raw HTML</mark>+++ and pass:[<em>also raw</em>].
+
+++++
+<p style="color: rebeccapurple">A whole passthrough block.</p>
+++++
+
+== Quotes and breaks
+
+'''
+
+A thematic break sits above this paragraph.
+
+<<<
+
+A page break sits above this one (it shows only in print).

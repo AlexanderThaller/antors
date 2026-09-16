@@ -1,0 +1,8 @@
+= Legacy notes
+:navtitle: Legacy
+
+Pages that exist in one version and not another are what makes the version
+selector interesting: switching from here to 2.0 lands on that version's start
+page, because 2.0 has no `legacy.adoc`.
+
+WARNING: This version is no longer maintained.

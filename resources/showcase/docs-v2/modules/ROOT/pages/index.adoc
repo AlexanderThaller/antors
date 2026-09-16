@@ -1,0 +1,55 @@
+= Antors Showcase
+:description: One Antora site through every feature antors has to reproduce.
+:keywords: antora, asciidoc, rust
+:page-aliases: home.adoc, start.adoc
+
+This site is the reference build. It is rendered by Antora first, then by
+`antors`, and the two outputs are compared.
+
+Every page here exercises something the Rust implementation has to reproduce:
+a piece of AsciiDoc, a piece of Antora's resource model, or a piece of the
+page shell the default UI wraps around them.
+
+== What is in it
+
+[cols="1,3"]
+|===
+| Page | What it covers
+
+| xref:text.adoc[Text]
+| Inline markup, attributes, replacements, footnotes.
+
+| xref:blocks.adoc[Blocks]
+| Admonitions, sidebars, quotes, examples, collapsible blocks.
+
+| xref:lists.adoc[Lists]
+| Unordered, ordered, description, checklists, continuations.
+
+| xref:tables.adoc[Tables]
+| Columns, spans, formats, nested content.
+
+| xref:code.adoc[Source code]
+| Listings, callouts, highlighting, includes with tags.
+
+| xref:resource-ids.adoc[Resource IDs]
+| Every shape of `xref:` Antora understands.
+
+| xref:includes.adoc[Includes]
+| `partial$`, `example$`, tags, line ranges, `leveloffset`.
+
+| xref:media.adoc[Media]
+| `image$`, `attachment$`, inline images, figure captions.
+
+| xref:page-attributes.adoc[Page attributes]
+| `page-*` attributes and what the UI does with them.
+|===
+
+== Attributes
+
+The component descriptor sets `product-name` to *{product-name}* and
+`release-version` to *{release-version}*. The playbook sets `experimental`,
+which is what makes the kbd:[Ctrl+C] macro work.
+
+TIP: The version selector in the toolbar switches between
+xref:2.0@showcase:ROOT:index.adoc[2.0] and
+xref:1.0@showcase:ROOT:index.adoc[1.0].

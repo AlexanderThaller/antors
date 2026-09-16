@@ -1,0 +1,13 @@
+[package]
+name = "antors-ui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "The page shell for an Antora site: navbar, navigation sidebar, toolbar and outline"
+keywords = ["antora", "asciidoc", "documentation", "html"]
+categories = ["template-engine", "text-processing"]
+
+[lints]
+workspace = true

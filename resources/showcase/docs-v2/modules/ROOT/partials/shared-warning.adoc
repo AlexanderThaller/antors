@@ -1,0 +1,2 @@
+WARNING: This is a shared partial. It is included by more than one page, so a
+change here shows up in all of them.

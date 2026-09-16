@@ -1,0 +1,26 @@
+[package]
+name = "antors-asciidoc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Parse and render an Antora site's pages, resolving resource IDs against its catalog"
+keywords = ["antora", "asciidoc", "documentation"]
+categories = ["text-processing"]
+
+[dependencies]
+adocers-html.workspace = true
+antors-content.workspace = true
+antors-model.workspace = true
+asciidoc-parser.workspace = true
+thiserror.workspace = true
+
+[features]
+default = ["highlight", "math", "mermaid"]
+highlight = ["adocers-html/highlight"]
+math = ["adocers-html/math"]
+mermaid = ["adocers-html/mermaid"]
+
+[lints]
+workspace = true

@@ -1,0 +1,8 @@
+= An included section
+
+Included with `leveloffset=+1`, so this heading becomes a subsection of
+whatever included it.
+
+== And a subsection of its own
+
+Which becomes one level deeper again.

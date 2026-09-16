@@ -1,0 +1,13 @@
+= Error codes
+:navtitle: Error codes
+
+[cols="1,1,3", options="header"]
+|===
+| Code | Name | When
+
+| 404 | Not found | No component, version or page by that resource ID.
+| 409 | Conflict | Two content sources contribute the same component version.
+| 422 | Unprocessable | A navigation file references a page that does not exist.
+|===
+
+CAUTION: A 409 stops the build rather than picking a winner.

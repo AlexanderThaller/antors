@@ -1,0 +1,10 @@
+= Sidecar
+:description: A second, unversioned component.
+
+`sidecar` is a component with `version: ~`, so its pages sit at
+`/sidecar/index.html` with no version segment in the URL — and the version
+selector does not appear for it.
+
+It exists so the component dropdown in the navbar has something to switch
+between, and so a cross-component xref has a target:
+xref:showcase::resource-ids.adoc[back to resource IDs].
