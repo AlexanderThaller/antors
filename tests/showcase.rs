@@ -461,6 +461,51 @@ fn the_tags_page_can_be_switched_off() {
 }
 
 #[test]
+fn a_page_left_over_from_an_earlier_build_is_reported() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let out = root.join("target/tests/stale");
+
+    // A page at a URL this build does not use — what a component that has just
+    // been given versions leaves behind at every one of its old URLs.
+    let leftover = out.join("showcase/moved-away.html");
+    std::fs::create_dir_all(leftover.parent().expect("it has a parent"))
+        .expect("the directory is created");
+    std::fs::write(&leftover, "<html>from an earlier build</html>").expect("the file is written");
+
+    let mut playbook = Playbook::load(&root.join("resources/showcase/antora-playbook.yml"))
+        .expect("the showcase playbook loads");
+
+    playbook.output.dir.clone_from(&out);
+
+    let report = Build::new(
+        playbook,
+        Options {
+            render: antors_site::build::RenderOptions::default(),
+
+            // Not cleaning is the whole point: a build that emptied the
+            // directory could not leave anything behind to find.
+            clean: false,
+            tags_page: true,
+        },
+    )
+    .run()
+    .expect("the showcase builds");
+
+    let complaint = report
+        .problems
+        .iter()
+        .find(|problem| problem.file == "output")
+        .unwrap_or_else(|| panic!("the leftover page was not reported: {:#?}", report.problems));
+
+    assert!(complaint.message.contains("moved-away.html"), "{complaint}");
+    assert!(complaint.message.contains("--clean"), "{complaint}");
+
+    // It is still there: the build says so rather than deleting what it did
+    // not put there.
+    assert!(leftover.exists());
+}
+
+#[test]
 fn a_clean_showcase_reports_nothing_about_its_content() {
     let (_, report) = build("report");
 

@@ -23,6 +23,9 @@ use antors_content::{
 
 /// What a problem with the build's own configuration is reported against.
 const PLAYBOOK: &str = "playbook";
+
+/// What a problem with the output directory is reported against.
+const OUTPUT: &str = "output";
 use antors_model::{
     Family,
     Playbook,
@@ -201,6 +204,8 @@ impl Build {
         Self::write_resources(&catalog, &mut writer, &mut report);
         self.write_redirects(&catalog, &mut writer, &mut report)?;
         self.write_site_files(&catalog, &mut writer, &mut report)?;
+
+        Self::report_stale(&writer, &mut report);
 
         report.pages = writer.pages;
         report.files = writer.files;
@@ -486,6 +491,50 @@ impl Build {
         }
 
         Ok(())
+    }
+
+    /// Say what was in the output directory that this build did not write.
+    ///
+    /// A page that has moved — because a component was versioned, or renamed,
+    /// or a module split — leaves its old copy at its old URL, and that copy
+    /// still loads. Somebody then reads it, finds it missing whatever the move
+    /// was for, and concludes the build is broken. Naming the leftovers is the
+    /// difference between that and one line saying what to do about it.
+    fn report_stale(writer: &Writer, report: &mut Report) {
+        // A handful is enough to recognize what happened; the whole list for a
+        // site that changed layout would be the whole site.
+        const SHOWN: usize = 3;
+
+        let stale = writer.stale();
+
+        if stale.is_empty() {
+            return;
+        }
+
+        let examples = stale
+            .iter()
+            .take(SHOWN)
+            .map(String::as_str)
+            .collect::<Vec<&str>>()
+            .join("`, `");
+
+        let rest = match stale.len().saturating_sub(SHOWN) {
+            0 => String::new(),
+            more => format!(" and {more} more"),
+        };
+
+        report.warn(
+            OUTPUT,
+            None,
+            format!(
+                "{} page{} in the output directory {} not written by this build: \
+                 `{examples}`{rest}. They are left over from an earlier build and still load — \
+                 use `--clean`, or `output.clean: true`, to remove them",
+                stale.len(),
+                if stale.len() == 1 { "" } else { "s" },
+                if stale.len() == 1 { "was" } else { "were" },
+            ),
+        );
     }
 
     /// Say what the playbook asked for that this build does not do.

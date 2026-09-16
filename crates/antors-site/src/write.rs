@@ -1,8 +1,11 @@
 //! Putting files where they go.
 
-use std::path::{
-    Path,
-    PathBuf,
+use std::{
+    collections::BTreeSet,
+    path::{
+        Path,
+        PathBuf,
+    },
 };
 
 use crate::build::BuildError;
@@ -18,6 +21,12 @@ pub(crate) struct Writer {
 
     /// How many other files have been written.
     pub(crate) files: usize,
+
+    /// Every path written, relative to the output directory.
+    ///
+    /// Kept so the build can tell what was *already* there — see
+    /// [`stale`](Self::stale).
+    written: BTreeSet<String>,
 }
 
 impl Writer {
@@ -27,7 +36,57 @@ impl Writer {
             root,
             pages: 0,
             files: 0,
+            written: BTreeSet::new(),
         }
+    }
+
+    /// The pages in the output directory that this build did not write.
+    ///
+    /// A site is written over whatever was there before, and a page that has
+    /// moved — because a component was versioned, or renamed, or a module
+    /// split — leaves its old copy behind at its old URL. That copy still
+    /// loads, still looks like a page, and is indistinguishable from a current
+    /// one until someone notices it is missing something.
+    ///
+    /// So the leftovers are counted. Only pages: an output directory may also
+    /// hold a `CNAME`, a `.nojekyll` or anything else its owner put there, and
+    /// none of those can be mistaken for content.
+    pub(crate) fn stale(&self) -> Vec<String> {
+        let mut stale = Vec::new();
+        let mut pending = vec![self.root.clone()];
+
+        while let Some(directory) = pending.pop() {
+            let Ok(entries) = std::fs::read_dir(&directory) else {
+                continue;
+            };
+
+            for entry in entries.flatten() {
+                let path = entry.path();
+
+                if path.is_dir() {
+                    pending.push(path);
+                    continue;
+                }
+
+                if path.extension().is_none_or(|extension| extension != "html") {
+                    continue;
+                }
+
+                let Ok(relative) = path.strip_prefix(&self.root) else {
+                    continue;
+                };
+
+                let relative = relative.to_string_lossy().replace('\\', "/");
+
+                if !self.written.contains(&relative) {
+                    stale.push(relative);
+                }
+            }
+        }
+
+        stale.sort();
+
+        stale
     }
 
     /// Empty the output directory.
@@ -63,7 +122,9 @@ impl Writer {
     }
 
     /// Write bytes, creating the directories they go in.
-    fn write(&self, path: &str, contents: &[u8]) -> Result<(), BuildError> {
+    fn write(&mut self, path: &str, contents: &[u8]) -> Result<(), BuildError> {
+        self.written.insert(path.to_string());
+
         let destination = self.root.join(path);
         Self::parent(&destination)?;
 

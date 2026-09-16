@@ -29,6 +29,7 @@ here re-implements AsciiDoc; what it adds is Antora's model on top of it.
 | Navigation | several `nav.adoc` per component, nested lists, list titles, external entries |
 | Page shell | navbar, navigation sidebar, breadcrumbs, version selector, outline, pagination, edit link |
 | Output | `page-aliases` redirects, site start page, `404.html`, `robots.txt`, sitemaps |
+| Leftovers | a page in the output directory that this build did not write is reported — a site is written *over* the last one, and a page that moved leaves a copy at its old URL |
 | Diagrams | a `[mermaid]` block is drawn while the site is built, so no library is loaded in the browser |
 | Metadata | a document's author, revision, status and tags are shown under its title — see [Beyond Antora](#beyond-antora) |
 | Tags | `:page-tags:` gathers into a generated `tags.adoc` per component version |
