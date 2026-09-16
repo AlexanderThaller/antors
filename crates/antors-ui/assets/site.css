@@ -243,7 +243,7 @@ a:hover {
 
 .nav-menu > .title {
   margin: 0 0 0.75rem;
-  padding: 0 1.25rem;
+  padding: 0 1.25rem 0 1.55rem;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -261,11 +261,15 @@ a:hover {
   list-style: none;
 }
 
-/* Each level is indented by the same step, which is applied to the list
- * rather than to the item so a group heading and the pages under it line up
- * with each other rather than with the toggle beside them. */
+/* Each level is indented by the same step, applied to the list rather than to
+ * the item so a group heading and the pages under it line up with each other
+ * rather than with the toggle beside them.
+ *
+ * The line down the left of a nested list is drawn on the list, and the space
+ * a toggle sits in is *inside* it — so the arrow beside an entry never lands
+ * on the line belonging to that entry's own level. */
 .nav-list .nav-list {
-  margin-left: 0.75rem;
+  margin-left: 1.15rem;
   border-left: 1px solid var(--color-border);
 }
 
@@ -287,14 +291,18 @@ a:hover {
 .nav-link,
 .nav-text {
   display: block;
-  padding: 0.3rem 1.25rem 0.3rem 1.25rem;
+
+  /* The left padding is the room the toggle sits in. Every level reserves it,
+   * whether or not the entry has one, so entries at one level line up with
+   * each other rather than with whichever of them happens to expand. */
+  padding: 0.3rem 1.25rem 0.3rem 1.55rem;
   color: var(--color-muted);
   line-height: 1.4;
 }
 
 .nav-list .nav-list .nav-link,
 .nav-list .nav-list .nav-text {
-  padding-left: 0.75rem;
+  padding-left: 1.3rem;
 }
 
 .nav-text {
@@ -317,7 +325,7 @@ a:hover {
 .nav-item-toggle {
   position: absolute;
   top: 0.3rem;
-  left: 0.15rem;
+  left: 0.3rem;
   width: 1.1rem;
   height: 1.3rem;
   padding: 0;
@@ -328,7 +336,7 @@ a:hover {
 }
 
 .nav-list .nav-list .nav-item-toggle {
-  left: -0.6rem;
+  left: 0.1rem;
 }
 
 .nav-item-toggle::before {

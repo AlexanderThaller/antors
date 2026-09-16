@@ -241,6 +241,41 @@ fn the_navigation_is_drawn_from_every_nav_file() {
     let blocks = page(&out, "showcase/2.0/blocks.html");
     assert!(blocks.contains(r#"class="nav-item is-current-page""#));
     assert!(blocks.contains("is-open"));
+
+    // `modules/ROOT/nav.adoc` has no list title, so its entries are top-level
+    // siblings of the titled files' groups rather than a level deeper — and the
+    // container they arrive in gets no expand arrow of its own.
+    let menu = html
+        .split("<nav class=\"nav-menu\">")
+        .nth(1)
+        .and_then(|menu| menu.split("</nav>").next())
+        .expect("the page has a navigation menu");
+
+    let top_level: Vec<&str> = menu
+        .split("<ul class=\"nav-list\">")
+        .nth(1)
+        .expect("the menu has a list")
+        .split("<li class=\"nav-item")
+        .skip(1)
+        .collect();
+
+    assert!(
+        top_level
+            .first()
+            .is_some_and(|first| first.contains("Introduction")),
+        "the first entry should be Introduction, not an unnamed container"
+    );
+
+    // An arrow is always followed by the entry it expands — a link or a piece
+    // of text. One followed straight by the nested list has nothing beside it,
+    // and appears to belong to the entry above.
+    for after in menu.split("</button>").skip(1) {
+        assert!(
+            after.trim_start().starts_with("<a ") || after.trim_start().starts_with("<span "),
+            "an expand arrow with nothing beside it, before: {}",
+            &after[..after.len().min(60)]
+        );
+    }
 }
 
 #[test]

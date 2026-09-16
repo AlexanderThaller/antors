@@ -56,6 +56,8 @@ fn menu(page: &Page) -> String {
 
 /// One level of the navigation tree.
 fn list(items: &[NavItem]) -> String {
+    let items = flattened(items);
+
     if items.is_empty() {
         return String::new();
     }
@@ -69,6 +71,29 @@ fn list(items: &[NavItem]) -> String {
     out.push_str("</ul>\n");
 
     out
+}
+
+/// Replace each anonymous group with the entries inside it.
+///
+/// Every navigation file contributes one entry, whose text is the file's list
+/// title — and a file that has no list title contributes one with no text. That
+/// entry is a container, not a place: it cannot be clicked, cannot be read, and
+/// there is nothing for a toggle beside it to expand. Drawing it anyway would
+/// indent everything in a file that happens to have no title one level deeper
+/// than everything in a file that has one, which is the opposite of what the
+/// two files said about themselves.
+fn flattened(items: &[NavItem]) -> Vec<&NavItem> {
+    let mut flattened = Vec::with_capacity(items.len());
+
+    for item in items {
+        if item.content.is_empty() && item.href.is_none() {
+            flattened.extend(item.items.iter());
+        } else {
+            flattened.push(item);
+        }
+    }
+
+    flattened
 }
 
 /// One navigation entry, and everything beneath it.
@@ -87,7 +112,10 @@ fn entry(item: &NavItem) -> String {
 
     let mut out = format!("<li class=\"{classes}\">\n");
 
-    if !item.items.is_empty() {
+    // Only an entry that is drawn gets a toggle. One that is not has nothing
+    // for the toggle to sit beside, and an arrow pointing at the entry above it
+    // is worse than no arrow at all.
+    if !item.items.is_empty() && !item.content.is_empty() {
         out.push_str(
             "<button class=\"nav-item-toggle\" aria-label=\"Expand or collapse this \
              section\"></button>\n",
@@ -192,4 +220,69 @@ fn component_entry(component: &ComponentEntry) -> String {
     out.push_str("</li>\n");
 
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn named(content: &str, items: Vec<NavItem>) -> NavItem {
+        NavItem {
+            content: content.to_string(),
+            href: Some("x.html".to_string()),
+            items,
+            ..NavItem::default()
+        }
+    }
+
+    fn anonymous(items: Vec<NavItem>) -> NavItem {
+        NavItem {
+            items,
+            ..NavItem::default()
+        }
+    }
+
+    #[test]
+    fn an_anonymous_group_is_replaced_by_what_is_inside_it() {
+        // A navigation file with no list title contributes one of these, and
+        // drawing it would indent its whole file one level deeper than a file
+        // that happens to have a title.
+        let items = vec![
+            anonymous(vec![
+                named("Introduction", Vec::new()),
+                named("Blocks", Vec::new()),
+            ]),
+            named("Guide", vec![named("Start", Vec::new())]),
+        ];
+
+        let flat = flattened(&items);
+
+        let contents: Vec<&str> = flat.iter().map(|item| item.content.as_str()).collect();
+        assert_eq!(contents, ["Introduction", "Blocks", "Guide"]);
+    }
+
+    #[test]
+    fn a_named_group_keeps_its_children() {
+        let items = vec![named("Guide", vec![named("Start", Vec::new())])];
+
+        assert_eq!(flattened(&items).len(), 1);
+        assert_eq!(flattened(&items)[0].items.len(), 1);
+    }
+
+    #[test]
+    fn an_entry_that_is_not_drawn_gets_no_toggle() {
+        let html = entry(&anonymous(vec![named("Blocks", Vec::new())]));
+
+        assert!(
+            !html.contains("nav-item-toggle"),
+            "an arrow with nothing beside it: {html}"
+        );
+    }
+
+    #[test]
+    fn a_group_that_is_drawn_does_get_one() {
+        let html = entry(&named("Guide", vec![named("Start", Vec::new())]));
+
+        assert!(html.contains("nav-item-toggle"));
+    }
 }
