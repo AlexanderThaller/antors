@@ -191,6 +191,19 @@ fn includes_are_read_through_the_catalog() {
 }
 
 #[test]
+fn a_bare_include_target_may_climb_into_another_family() {
+    let (out, _) = build("bare-include");
+    let html = page(&out, "showcase/2.0/includes.html");
+
+    // `include::../examples/playbook.yml[tag=site]` from a page: the `..`
+    // leaves `pages/`, and `examples/` is what decides the family.
+    assert!(
+        html.contains("Antors Showcase"),
+        "the example was not included"
+    );
+}
+
+#[test]
 fn tagged_regions_of_an_example_are_included() {
     let (out, _) = build("tags");
     let html = page(&out, "showcase/2.0/code.html");
@@ -336,14 +349,42 @@ fn the_breadcrumbs_follow_the_navigation_rather_than_the_directories() {
 }
 
 #[test]
-fn a_clean_showcase_reports_nothing() {
+fn a_clean_showcase_reports_nothing_about_its_content() {
     let (_, report) = build("report");
 
+    let content: Vec<&antors_site::Problem> = report
+        .problems
+        .iter()
+        .filter(|problem| problem.file != "playbook")
+        .collect();
+
     assert!(
-        report.problems.is_empty(),
-        "the showcase should build without complaint, but: {:#?}",
-        report.problems
+        content.is_empty(),
+        "the showcase should build without complaint, but: {content:#?}"
     );
 
     assert_eq!(report.pages, 17);
+}
+
+#[test]
+fn the_playbook_is_told_what_this_build_does_not_do() {
+    let (_, report) = build("notices");
+
+    let playbook: Vec<&str> = report
+        .problems
+        .iter()
+        .filter(|problem| problem.file == "playbook")
+        .map(|problem| problem.message.as_str())
+        .collect();
+
+    // The showcase playbook names a UI bundle, because Antora builds the same
+    // playbook and needs one. This build does not use it, and says so rather
+    // than leaving the reader to wonder why the page looks different.
+    assert_eq!(
+        playbook.len(),
+        1,
+        "expected only the UI bundle notice, got {playbook:#?}"
+    );
+
+    assert!(playbook[0].contains("UI bundle"), "{}", playbook[0]);
 }

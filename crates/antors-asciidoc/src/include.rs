@@ -103,14 +103,18 @@ impl Resolver {
         };
 
         // A target that names no family is relative to the file that wrote it:
-        // a partial beside a partial, an example beside an example. Only a
-        // target that names one may leave the including file's family.
-        let default_family = from.family;
-
-        let mut resolved = id.resolve_in(&context, default_family);
+        // a partial beside a partial, an example beside an example.
+        let mut resolved = id.resolve_in(&context, from.family);
 
         if id.is_bare() {
-            resolved.relative = sibling(&from.relative, target);
+            // …and a bare target may still climb out of its family, which is
+            // how a page reaches `../examples/config.yaml`. The join is done on
+            // the *module*-relative path, so the family is whatever directory
+            // the climb lands in rather than the one it started from.
+            let (family, relative) = beside(from.family, &from.relative, target)?;
+
+            resolved.family = family;
+            resolved.relative = relative;
         }
 
         self.catalog.resolve(&resolved).map(|file| file.key.clone())
@@ -128,20 +132,25 @@ impl Resolver {
     }
 }
 
-/// A path beside `from`, for a target written as a bare relative path.
-fn sibling(from: &str, target: &str) -> String {
-    let directory = match from.rfind('/') {
-        Some(index) => &from[..index],
-        None => "",
-    };
+/// Where a bare relative target lands, starting from a file in `family` at
+/// `relative`.
+///
+/// The arithmetic is done on the path from the *module* root — `pages/a.adoc`
+/// rather than `a.adoc` — because that is the only frame in which `..` means
+/// what the author meant. A target that stays put keeps its family; one that
+/// climbs into a sibling directory takes that directory's family, which is why
+/// `include::../examples/config.yaml[]` from a page finds an example.
+fn beside(family: Family, relative: &str, target: &str) -> Option<(Family, String)> {
+    let directory = family.directory()?;
+    let joined = normalize(&format!("{directory}/{relative}/../{target}"));
 
-    let joined = if directory.is_empty() {
-        target.to_string()
-    } else {
-        format!("{directory}/{target}")
-    };
+    let (head, rest) = joined.split_once('/')?;
 
-    normalize(&joined)
+    // A climb that lands somewhere that is not a family is a target pointing
+    // outside the module, which no resource ID can name.
+    let family = Family::from_directory(head)?;
+
+    (!rest.is_empty()).then(|| (family, rest.to_string()))
 }
 
 /// Collapse `.` and `..` in a `/`-separated path.
@@ -232,20 +241,47 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_sibling_stays_in_the_same_directory() {
-        assert_eq!(sibling("sub/one.adoc", "two.adoc"), "sub/two.adoc");
-        assert_eq!(sibling("one.adoc", "two.adoc"), "two.adoc");
+    fn a_bare_target_stays_in_the_same_directory() {
+        assert_eq!(
+            beside(Family::Partial, "sub/one.adoc", "two.adoc"),
+            Some((Family::Partial, "sub/two.adoc".to_string()))
+        );
+
+        assert_eq!(
+            beside(Family::Partial, "one.adoc", "two.adoc"),
+            Some((Family::Partial, "two.adoc".to_string()))
+        );
     }
 
     #[test]
-    fn a_sibling_may_climb() {
-        assert_eq!(sibling("sub/deep/one.adoc", "../two.adoc"), "sub/two.adoc");
-        assert_eq!(sibling("sub/one.adoc", "../two.adoc"), "two.adoc");
+    fn a_bare_target_may_climb_within_its_family() {
+        assert_eq!(
+            beside(Family::Partial, "sub/deep/one.adoc", "../two.adoc"),
+            Some((Family::Partial, "sub/two.adoc".to_string()))
+        );
     }
 
     #[test]
-    fn climbing_past_the_root_keeps_the_target_as_written() {
-        assert_eq!(sibling("one.adoc", "../../two.adoc"), "../../two.adoc");
+    fn a_bare_target_may_climb_into_another_family() {
+        // The form a page uses to reach an example without naming its family.
+        assert_eq!(
+            beside(Family::Page, "0002-design.adoc", "../examples/crd.yaml"),
+            Some((Family::Example, "crd.yaml".to_string()))
+        );
+
+        assert_eq!(
+            beside(Family::Page, "sub/a.adoc", "../../partials/note.adoc"),
+            Some((Family::Partial, "note.adoc".to_string()))
+        );
+    }
+
+    #[test]
+    fn climbing_out_of_the_module_names_nothing() {
+        assert_eq!(beside(Family::Page, "one.adoc", "../../../x.adoc"), None);
+        assert_eq!(
+            beside(Family::Page, "one.adoc", "../elsewhere/x.adoc"),
+            None
+        );
     }
 
     #[test]

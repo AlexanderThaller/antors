@@ -77,6 +77,17 @@ pub enum AggregateError {
         error: std::io::Error,
     },
 
+    /// Nothing said what version a component version is.
+    #[error("in `{}`", path.display())]
+    Version {
+        /// The descriptor that said nothing.
+        path: PathBuf,
+
+        /// What was missing.
+        #[source]
+        error: antors_model::descriptor::MissingVersion,
+    },
+
     /// An `antora.yml` was not a component descriptor.
     #[error("parsing `{}`", path.display())]
     Descriptor {
@@ -97,22 +108,60 @@ pub enum AggregateError {
     Catalog(#[from] Box<CatalogError>),
 }
 
+/// What a build should be told about, that did not stop it.
+///
+/// A playbook may ask for things this build cannot do — a branch it cannot
+/// read, a UI bundle it cannot unpack, an extension it cannot run. None of
+/// those is a reason to produce nothing, and all of them are reasons the site
+/// will not be what the author expected, so each is carried out with the
+/// catalog rather than swallowed.
+#[derive(Clone, Debug, thiserror::Error)]
+pub enum Notice {
+    /// A source asked for refs that are not the checked-out worktree.
+    #[error(
+        "`{url}` asks for {refs}, and this build reads only the checked-out worktree (`{current}`)"
+    )]
+    UnreadableRefs {
+        /// The source that asked.
+        url: String,
+
+        /// What it asked for, as written.
+        refs: String,
+
+        /// What is actually checked out.
+        current: String,
+    },
+}
+
+/// A catalog, and what the build should be told about collecting it.
+#[derive(Debug)]
+pub struct Aggregated {
+    /// Every resource that was collected.
+    pub catalog: Catalog,
+
+    /// What the playbook asked for that this build could not do.
+    pub notices: Vec<Notice>,
+}
+
 /// Collect every content source the playbook names.
-pub fn aggregate(playbook: &Playbook) -> Result<Catalog, AggregateError> {
-    let mut catalog = Catalog::new(playbook.urls.html_extension_style);
+pub fn aggregate(playbook: &Playbook) -> Result<Aggregated, AggregateError> {
+    let mut aggregated = Aggregated {
+        catalog: Catalog::new(playbook.urls.html_extension_style),
+        notices: Vec::new(),
+    };
 
     for source in &playbook.content.sources {
-        collect_source(playbook, source, &mut catalog)?;
+        collect_source(playbook, source, &mut aggregated)?;
     }
 
-    Ok(catalog)
+    Ok(aggregated)
 }
 
 /// Collect every start path of one source.
 fn collect_source(
     playbook: &Playbook,
     source: &Source,
-    catalog: &mut Catalog,
+    aggregated: &mut Aggregated,
 ) -> Result<(), AggregateError> {
     if !is_local(&source.url) {
         return Err(AggregateError::RemoteSource {
@@ -122,6 +171,25 @@ fn collect_source(
 
     let worktree = PathBuf::from(&source.url);
     let repository = Repository::discover(&worktree);
+
+    // Only the checked-out worktree is read, so a source that asks for other
+    // refs gets what it asked for in part. Saying which part is the difference
+    // between a site that is missing a version and a site that is missing a
+    // version *and* nobody knows.
+    let unreadable: Vec<String> = source
+        .branches(&playbook.content)
+        .into_iter()
+        .chain(source.tags(&playbook.content))
+        .filter(|pattern| !names_the_worktree(pattern, &repository.refname))
+        .collect();
+
+    if !unreadable.is_empty() {
+        aggregated.notices.push(Notice::UnreadableRefs {
+            url: source.url.clone(),
+            refs: unreadable.join("`, `"),
+            current: repository.refname.clone(),
+        });
+    }
 
     let edit_url_pattern = source
         .edit_url
@@ -146,16 +214,44 @@ fn collect_source(
             edit_url_pattern: edit_url_pattern.clone(),
         });
 
-        collect_component_version(&root, &origin, catalog)?;
+        collect_component_version(
+            &root,
+            &origin,
+            source.version(&playbook.content),
+            &mut aggregated.catalog,
+        )?;
     }
 
     Ok(())
+}
+
+/// Whether a `branches:` or `tags:` pattern names the ref that is checked out.
+///
+/// `HEAD` and `.` are how a playbook says "whatever is checked out". Everything
+/// else is matched by name, or by a glob — the shapes a real playbook uses are
+/// a literal name and a trailing `*`, and anything more elaborate is treated as
+/// not matching, which reports the ref rather than quietly reading the wrong
+/// one.
+fn names_the_worktree(pattern: &str, current: &str) -> bool {
+    if pattern == "HEAD" || pattern == "." || pattern == "*" {
+        return true;
+    }
+
+    match pattern.split_once('*') {
+        None => pattern == current,
+
+        // A `*` in the middle, or more than one, is more than this
+        // understands.
+        Some((prefix, "")) => current.starts_with(prefix),
+        Some(_) => false,
+    }
 }
 
 /// Collect one start path: its descriptor, its modules and its navigation.
 fn collect_component_version(
     root: &Path,
     origin: &Arc<Origin>,
+    version: Option<&antors_model::playbook::VersionSpec>,
     catalog: &mut Catalog,
 ) -> Result<(), AggregateError> {
     let descriptor_path = root.join("antora.yml");
@@ -171,10 +267,20 @@ fn collect_component_version(
         error,
     })?;
 
-    let descriptor: Descriptor =
+    let mut descriptor: Descriptor =
         serde_yaml_ng::from_str(&source).map_err(|error| AggregateError::Descriptor {
             path: descriptor_path.clone(),
             error: Box::new(error),
+        })?;
+
+    // The descriptor may name its own version, or leave it to the content
+    // source — which is how one `antora.yml`, committed to several branches,
+    // describes several versions without being edited on each.
+    descriptor
+        .resolve_version(version, &origin.refname)
+        .map_err(|error| AggregateError::Version {
+            path: descriptor_path.clone(),
+            error,
         })?;
 
     let component = descriptor.name.clone();

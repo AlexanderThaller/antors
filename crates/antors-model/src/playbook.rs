@@ -67,6 +67,15 @@ pub struct Playbook {
     /// run.
     #[serde(default)]
     pub antora: Antora,
+
+    /// How repositories are reached. Parsed so a real playbook loads; only the
+    /// keys a local build needs are acted on.
+    #[serde(default)]
+    pub git: Git,
+
+    /// Proxy settings, for a build that fetches. Parsed for the same reason.
+    #[serde(default)]
+    pub network: Network,
 }
 
 impl Playbook {
@@ -186,6 +195,11 @@ pub struct Site {
     /// like. Carried through to the templates untouched.
     #[serde(default)]
     pub keys: BTreeMap<String, String>,
+
+    /// Antora's deprecated spelling of `keys.google_analytics`. Read so a
+    /// playbook that still has it loads.
+    #[serde(default, rename = "__private__google_analytics_key")]
+    pub google_analytics_key: Option<String>,
 }
 
 /// The `content:` key.
@@ -207,6 +221,14 @@ pub struct Content {
     /// The default `edit_url` for a source that names none.
     #[serde(default, deserialize_with = "optional_scalar")]
     pub edit_url: Option<String>,
+
+    /// The default `version` for a source that names none.
+    #[serde(default)]
+    pub version: Option<VersionSpec>,
+
+    /// The default `worktrees` for a source that names none.
+    #[serde(default)]
+    pub worktrees: Option<Worktrees>,
 }
 
 /// One entry of `content.sources`.
@@ -242,6 +264,19 @@ pub struct Source {
     /// Paths within the source not to collect.
     #[serde(default)]
     pub exclude: Option<Refs>,
+
+    /// What version each ref of this source contributes.
+    ///
+    /// This is a *fallback*: a component descriptor that names its own version
+    /// still wins. It is how one `antora.yml`, committed to several branches,
+    /// describes several versions without being edited on each.
+    #[serde(default)]
+    pub version: Option<VersionSpec>,
+
+    /// Which refs are read from a worktree rather than from git's object
+    /// database.
+    #[serde(default)]
+    pub worktrees: Option<Worktrees>,
 }
 
 impl Source {
@@ -256,6 +291,43 @@ impl Source {
 
         vec![self.start_path.clone().unwrap_or_default()]
     }
+
+    /// Which branches this source reads, falling back to the playbook's
+    /// default and then to Antora's.
+    pub fn branches(&self, content: &Content) -> Vec<String> {
+        self.branches
+            .as_ref()
+            .or(content.branches.as_ref())
+            .map_or_else(default_branches, Refs::patterns)
+    }
+
+    /// Which tags this source reads. Antora reads none unless asked.
+    pub fn tags(&self, content: &Content) -> Vec<String> {
+        self.tags
+            .as_ref()
+            .or(content.tags.as_ref())
+            .map_or_else(Vec::new, Refs::patterns)
+    }
+
+    /// What version this source's refs contribute, when the descriptor does not
+    /// say.
+    pub fn version<'a>(&'a self, content: &'a Content) -> Option<&'a VersionSpec> {
+        self.version.as_ref().or(content.version.as_ref())
+    }
+
+    /// Which refs are read from a worktree.
+    pub fn worktrees<'a>(&'a self, content: &'a Content) -> &'a Worktrees {
+        self.worktrees
+            .as_ref()
+            .or(content.worktrees.as_ref())
+            .unwrap_or(&Worktrees::CURRENT)
+    }
+}
+
+/// What Antora reads when a playbook names no branches: the current worktree,
+/// and every tag-shaped branch.
+fn default_branches() -> Vec<String> {
+    vec!["HEAD".to_string(), "v{0..9}*".to_string()]
 }
 
 /// A `branches:`/`tags:`/`exclude:` value, which YAML lets be one string or a
@@ -278,6 +350,229 @@ impl Refs {
             Self::Many(patterns) => patterns.clone(),
         }
     }
+}
+
+/// What version a source's refs contribute, when the component descriptor does
+/// not say.
+///
+/// This exists because one `antora.yml`, committed to several branches, is the
+/// normal way to describe several versions of a component — and a descriptor
+/// that named its own version would have to be edited on every branch, which is
+/// exactly the merge conflict nobody wants.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+pub enum VersionSpec {
+    /// `version: true` uses the ref's own name; `version: false` makes the
+    /// component unversioned.
+    Flag(bool),
+
+    /// A version for every ref this source reads.
+    Text(String),
+
+    /// A number.
+    ///
+    /// Kept as YAML read it rather than as an `f64`, because `2.0` and `2` are
+    /// different versions and a round trip through a float loses the
+    /// difference — a `version: 2.0` published at `/2/` would break every link
+    /// anyone had to it.
+    Number(serde_yaml_ng::Number),
+
+    /// Patterns matched against the ref name, each with what to call it.
+    ///
+    /// A pattern may be a name (`main`), or a glob with a capture
+    /// (`v{0..9}*` → `*`), and the first that matches wins. A ref that matches
+    /// nothing keeps its own name.
+    Patterns(BTreeMap<String, Option<String>>),
+}
+
+impl VersionSpec {
+    /// What `refname` should be called.
+    ///
+    /// `None` means this spec says nothing and the descriptor must.
+    pub fn version_of(&self, refname: &str) -> Option<String> {
+        let version = match self {
+            // The ref's own name, with the separators a URL cannot carry
+            // replaced — `release/2.0` becomes `release-2.0`.
+            Self::Flag(true) => refname.to_string(),
+
+            // Unversioned, which is how a single-branch component says it has
+            // no versions rather than one called `main`.
+            Self::Flag(false) => String::new(),
+
+            Self::Text(text) => text.clone(),
+
+            Self::Number(number) => match number.as_i64() {
+                Some(integer) => integer.to_string(),
+                None => number.to_string(),
+            },
+
+            Self::Patterns(patterns) => match patterns.get(refname) {
+                Some(replacement) => replacement.clone().unwrap_or_default(),
+
+                None => patterns
+                    .iter()
+                    .find_map(|(pattern, replacement)| {
+                        substitute(refname, pattern, replacement.as_deref())
+                    })
+                    // A ref that matches no pattern keeps its own name, which
+                    // is what Antora does and means a new branch appears under
+                    // its own name rather than not at all.
+                    .unwrap_or_else(|| refname.to_string()),
+            },
+        };
+
+        Some(version.replace(['/', '\\'], "-"))
+    }
+}
+
+/// Apply one `version:` pattern to a ref name.
+///
+/// A pattern is a glob, and `*` in the replacement stands for what the glob's
+/// own `*` matched — so `v{0..9}*` → `*` turns `v2.1` into `2.1`. A replacement
+/// with no `*` is used as it stands.
+fn substitute(refname: &str, pattern: &str, replacement: Option<&str>) -> Option<String> {
+    let captured = glob_capture(refname, pattern)?;
+
+    Some(match replacement {
+        None => String::new(),
+        Some(replacement) => replacement.replace('*', &captured),
+    })
+}
+
+/// Match `refname` against a glob, returning what its `*` matched.
+///
+/// The globs a `version:` key uses are small — a literal prefix, a `{0..9}`
+/// digit class, and a trailing `*` — so they are matched directly rather than
+/// compiled. Anything more elaborate falls through as "no match", which leaves
+/// the ref under its own name rather than under a wrong one.
+fn glob_capture(refname: &str, pattern: &str) -> Option<String> {
+    let mut rest = refname;
+    let mut captured = None;
+    let mut chars = pattern.chars().peekable();
+
+    while let Some(character) = chars.next() {
+        match character {
+            '*' => {
+                // A trailing `*` takes everything that is left; one in the
+                // middle is more than these patterns are meant to express.
+                if chars.peek().is_some() {
+                    return None;
+                }
+
+                captured = Some(rest.to_string());
+                rest = "";
+            }
+
+            '{' => {
+                // `{0..9}` — one character from a range.
+                let class: String = chars.by_ref().take_while(|c| *c != '}').collect();
+                let (low, high) = class.split_once("..")?;
+
+                let low = low.chars().next()?;
+                let high = high.chars().next()?;
+                let next = rest.chars().next()?;
+
+                if next < low || next > high {
+                    return None;
+                }
+
+                rest = &rest[next.len_utf8()..];
+            }
+
+            literal => {
+                rest = rest.strip_prefix(literal)?;
+            }
+        }
+    }
+
+    rest.is_empty()
+        .then(|| captured.unwrap_or_else(|| refname.to_string()))
+}
+
+/// Which of a source's refs are read from a worktree rather than from git.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+pub enum Worktrees {
+    /// `true` reads every ref that has a worktree; `false` reads none.
+    Flag(bool),
+
+    /// A ref name, or `.` for whichever the repository has checked out.
+    One(String),
+
+    /// Several of those.
+    Many(Vec<String>),
+}
+
+impl Worktrees {
+    /// Antora's default: the checked-out worktree, and nothing else.
+    pub const CURRENT: Self = Self::Flag(true);
+
+    /// Whether `refname` should be read from a worktree.
+    ///
+    /// `.` means "whichever ref is checked out", which is why `current` has to
+    /// be supplied rather than compared against a name.
+    pub fn includes(&self, refname: &str, current: Option<&str>) -> bool {
+        let names = match self {
+            Self::Flag(flag) => return *flag && current == Some(refname),
+            Self::One(name) => std::slice::from_ref(name),
+            Self::Many(names) => names.as_slice(),
+        };
+
+        names.iter().any(|name| {
+            if name == "." {
+                current == Some(refname)
+            } else {
+                name == refname
+            }
+        })
+    }
+}
+
+/// The `git:` key: how repositories are reached.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Git {
+    /// Whether a URL with no `.git` suffix gets one.
+    #[serde(default)]
+    pub ensure_git_suffix: Option<bool>,
+
+    /// Where credentials for private repositories come from.
+    #[serde(default)]
+    pub credentials: Option<serde_yaml_ng::Value>,
+
+    /// How many repositories are fetched at once.
+    #[serde(default)]
+    pub fetch_concurrency: Option<u32>,
+
+    /// How deep a fetch goes.
+    #[serde(default)]
+    pub fetch_depth: Option<u32>,
+
+    /// How many refs are read at once.
+    #[serde(default)]
+    pub read_concurrency: Option<u32>,
+
+    /// Antora's git plugins. Read so a real playbook parses; they are Node
+    /// modules and are not loaded.
+    #[serde(default)]
+    pub plugins: Option<serde_yaml_ng::Value>,
+}
+
+/// The `network:` key.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Network {
+    /// The proxy for `http://` URLs.
+    #[serde(default)]
+    pub http_proxy: Option<String>,
+
+    /// The proxy for `https://` URLs.
+    #[serde(default)]
+    pub https_proxy: Option<String>,
+
+    /// Hosts that bypass the proxy.
+    #[serde(default)]
+    pub no_proxy: Option<String>,
 }
 
 /// The `urls:` key.
@@ -325,9 +620,35 @@ pub struct Ui {
     #[serde(default)]
     pub output_dir: Option<String>,
 
-    /// Files layered over the bundle after it is unpacked.
+    /// Files layered over the UI after it is unpacked.
     #[serde(default)]
-    pub supplemental_files: Option<serde_yaml_ng::Value>,
+    pub supplemental_files: Option<Supplemental>,
+}
+
+/// `ui.supplemental_files:` — what to lay over the UI.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+pub enum Supplemental {
+    /// A directory whose contents are copied over the UI.
+    Directory(String),
+
+    /// Individual files, each named and sourced.
+    Files(Vec<SupplementalFile>),
+}
+
+/// One entry of `ui.supplemental_files:`.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SupplementalFile {
+    /// Where the file goes, relative to the UI output directory.
+    pub path: String,
+
+    /// Where it comes from: a path to read, or the contents themselves.
+    ///
+    /// Antora tells the two apart by whether the value names a file that
+    /// exists, which is why one key carries both.
+    #[serde(default)]
+    pub contents: Option<String>,
 }
 
 /// The `ui.bundle:` key.
@@ -382,6 +703,10 @@ fn default_output_dir() -> PathBuf {
 /// The `runtime:` key.
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "these mirror the playbook's own keys, one field each"
+)]
 pub struct Runtime {
     /// Where fetched repositories and UI bundles are kept.
     #[serde(default)]
@@ -398,6 +723,10 @@ pub struct Runtime {
     /// Suppress all output.
     #[serde(default)]
     pub silent: bool,
+
+    /// Whether a failure prints where it came from.
+    #[serde(default)]
+    pub stacktrace: bool,
 
     /// How much to log, and what makes a build fail.
     #[serde(default)]
@@ -421,9 +750,13 @@ pub struct Log {
     #[serde(default)]
     pub format: Option<String>,
 
-    /// A file to log to instead of the terminal.
+    /// Where the log goes when not the terminal.
     #[serde(default)]
     pub destination: Option<serde_yaml_ng::Value>,
+
+    /// Antora's older spelling of `destination.file`.
+    #[serde(default)]
+    pub file: Option<String>,
 }
 
 /// The `antora:` key: Antora's own extension points.
@@ -434,6 +767,31 @@ pub struct Antora {
     /// written for Antora still parses; they are Node modules and are not run.
     #[serde(default)]
     pub extensions: Vec<serde_yaml_ng::Value>,
+
+    /// The site generator Antora should use. Parsed and ignored: this *is* the
+    /// site generator.
+    #[serde(default)]
+    pub generator: Option<String>,
+}
+
+impl Antora {
+    /// What each extension is required by name, for reporting them.
+    pub fn extension_names(&self) -> Vec<String> {
+        self.extensions
+            .iter()
+            .map(|extension| match extension {
+                serde_yaml_ng::Value::String(name) => name.clone(),
+
+                serde_yaml_ng::Value::Mapping(map) => map
+                    .get(serde_yaml_ng::Value::String("require".to_string()))
+                    .and_then(serde_yaml_ng::Value::as_str)
+                    .unwrap_or("<unnamed>")
+                    .to_string(),
+
+                _ => "<unnamed>".to_string(),
+            })
+            .collect()
+    }
 }
 
 /// Read an `html_extension_style:` value.

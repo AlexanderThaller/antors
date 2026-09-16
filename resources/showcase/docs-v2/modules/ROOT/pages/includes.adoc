@@ -29,6 +29,17 @@ The `leveloffset` above applies only to the included file.
 include::example$playbook.yml[]
 ----
 
+== A bare relative target
+
+An include target with no family is relative to the file that wrote it — and
+may climb out of its own family into a sibling one, which is how a page reaches
+an example without naming it:
+
+[source,yaml]
+----
+include::../examples/playbook.yml[tag=site]
+----
+
 == Includes inside other blocks
 
 .A sidebar holding an include

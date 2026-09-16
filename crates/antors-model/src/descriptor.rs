@@ -24,10 +24,13 @@ pub struct Descriptor {
 
     /// The version this directory contributes.
     ///
-    /// `~` means the component is unversioned: its pages sit at
-    /// `/{name}/…` with no version segment, and no version selector appears.
-    #[serde(default, deserialize_with = "crate::playbook::optional_scalar")]
-    pub version: Option<String>,
+    /// Absent is not the same as `~`. `~` says the component is unversioned —
+    /// its pages sit at `/{name}/…` with no version segment and no version
+    /// selector. Saying nothing at all leaves the question to the content
+    /// source's own `version:` key, which is how one `antora.yml` on several
+    /// branches describes several versions without being edited on each.
+    #[serde(default, deserialize_with = "version_field")]
+    pub version: VersionField,
 
     /// What the version selector shows instead of the bare version.
     #[serde(default)]
@@ -52,13 +55,85 @@ pub struct Descriptor {
     /// `AsciiDoc` settings for every page in this component version.
     #[serde(default)]
     pub asciidoc: Asciidoc,
+
+    /// The version worked out from [`version`](Self::version) and the content
+    /// source, once [`resolve_version`](Self::resolve_version) has run.
+    #[serde(skip)]
+    resolved_version: String,
+}
+
+/// Neither the descriptor nor the content source said what version this is.
+#[derive(Clone, Debug, thiserror::Error)]
+#[error(
+    "`{component}` does not say what version it is: give `antora.yml` a `version:` key, or the \
+     content source a `version:` key for the refs it reads"
+)]
+pub struct MissingVersion {
+    /// The component that said nothing.
+    pub component: String,
+}
+
+/// What a descriptor's `version:` key says, including saying nothing.
+#[derive(Clone, Debug, Default)]
+pub enum VersionField {
+    /// The key is not there, and the content source decides.
+    #[default]
+    Absent,
+
+    /// The key is there and says what the version is.
+    Present(crate::playbook::VersionSpec),
+}
+
+/// Read a descriptor's `version:`, telling `~` apart from absent.
+fn version_field<'de, D: serde::Deserializer<'de>>(de: D) -> Result<VersionField, D::Error> {
+    use serde::Deserialize as _;
+
+    let value = serde_yaml_ng::Value::deserialize(de)?;
+
+    Ok(match value {
+        // `version: ~` is a component that says it has no versions.
+        serde_yaml_ng::Value::Null => {
+            VersionField::Present(crate::playbook::VersionSpec::Flag(false))
+        }
+
+        other => VersionField::Present(
+            crate::playbook::VersionSpec::deserialize(other).map_err(serde::de::Error::custom)?,
+        ),
+    })
 }
 
 impl Descriptor {
     /// The version as the rest of the model spells it: the empty string for an
     /// unversioned component.
     pub fn version(&self) -> String {
-        self.version.clone().unwrap_or_default()
+        self.resolved_version.clone()
+    }
+
+    /// Work out this component version's version, from the descriptor if it
+    /// says and from the content source if it does not.
+    ///
+    /// `refname` is the branch or tag the descriptor was read from, which is
+    /// what `version: true` means.
+    pub fn resolve_version(
+        &mut self,
+        source: Option<&crate::playbook::VersionSpec>,
+        refname: &str,
+    ) -> Result<(), MissingVersion> {
+        let spec = match &self.version {
+            VersionField::Present(spec) => spec,
+
+            // The descriptor said nothing, so the playbook must. Neither
+            // saying anything is an error rather than a default: a component
+            // published at a URL with no version in it, because nobody
+            // mentioned one, is not something to guess at.
+            VersionField::Absent => source.ok_or(MissingVersion {
+                component: self.name.clone(),
+            })?,
+        };
+
+        self.resolved_version = spec.version_of(refname).unwrap_or_default();
+
+        Ok(())
     }
 
     /// What the UI should show for this version.
@@ -113,6 +188,15 @@ pub struct Asciidoc {
     /// Attributes set for every page this applies to.
     #[serde(default)]
     pub attributes: BTreeMap<String, AttributeValue>,
+
+    /// Asciidoctor extensions. Read so a real playbook parses; they are Node
+    /// modules and are not loaded.
+    #[serde(default)]
+    pub extensions: Vec<serde_yaml_ng::Value>,
+
+    /// Whether the parse keeps a source map.
+    #[serde(default)]
+    pub sourcemap: bool,
 }
 
 /// One entry of an `attributes:` map.
@@ -162,7 +246,7 @@ impl AttributeValue {
 
 /// Write a YAML number the way it was most likely written, so a `toclevels: 3`
 /// does not reach the document as `3.0`.
-fn format_number(number: f64) -> String {
+pub(crate) fn format_number(number: f64) -> String {
     if number.fract() == 0.0 && number.abs() < 1e15 {
         #[expect(
             clippy::cast_possible_truncation,
@@ -180,8 +264,22 @@ mod tests {
 
     use super::*;
 
+    /// Parse a descriptor and settle its version, the way a build does.
+    ///
+    /// `refname` is the branch it was read from, which is what `version: true`
+    /// on either side means.
+    fn parse_on(yaml: &str, refname: &str) -> Descriptor {
+        let mut descriptor: Descriptor = serde_yaml_ng::from_str(yaml).unwrap();
+
+        descriptor
+            .resolve_version(Some(&crate::playbook::VersionSpec::Flag(true)), refname)
+            .unwrap();
+
+        descriptor
+    }
+
     fn parse(yaml: &str) -> Descriptor {
-        serde_yaml_ng::from_str(yaml).unwrap()
+        parse_on(yaml, "main")
     }
 
     #[test]
@@ -190,6 +288,38 @@ mod tests {
 
         assert_eq!(descriptor.version(), "");
         assert_eq!(descriptor.display_version(), "");
+    }
+
+    #[test]
+    fn a_descriptor_that_says_nothing_takes_the_content_source_s_answer() {
+        // The usual shape for a component versioned by branch: one `antora.yml`
+        // with no `version:`, on several branches, and `version: true` in the
+        // playbook.
+        assert_eq!(parse_on("name: a\n", "develop").version(), "develop");
+
+        // A ref name that cannot be a URL segment is flattened rather than
+        // rejected.
+        assert_eq!(
+            parse_on("name: a\n", "release/2.0").version(),
+            "release-2.0"
+        );
+    }
+
+    #[test]
+    fn a_descriptor_that_does_say_wins() {
+        assert_eq!(
+            parse_on("name: a\nversion: '2.0'\n", "develop").version(),
+            "2.0"
+        );
+    }
+
+    #[test]
+    fn a_component_nobody_versioned_is_an_error() {
+        let mut descriptor: Descriptor = serde_yaml_ng::from_str("name: a\n").unwrap();
+
+        // Neither the descriptor nor the content source said, and a version
+        // segment silently missing from every URL is not a thing to guess at.
+        assert!(descriptor.resolve_version(None, "main").is_err());
     }
 
     #[test]

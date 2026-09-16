@@ -20,6 +20,9 @@ use antors_content::{
         aggregate,
     },
 };
+
+/// What a problem with the build's own configuration is reported against.
+const PLAYBOOK: &str = "playbook";
 use antors_model::{
     Family,
     Playbook,
@@ -166,7 +169,15 @@ impl Build {
     pub fn run(&self) -> Result<Report, BuildError> {
         let mut report = Report::default();
 
-        let catalog = aggregate(&self.playbook)?;
+        let aggregated = aggregate(&self.playbook)?;
+
+        for notice in &aggregated.notices {
+            report.warn(PLAYBOOK, None, notice.to_string());
+        }
+
+        self.report_what_is_not_run(&mut report);
+
+        let catalog = aggregated.catalog;
 
         // The titles pass. Every page's name has to be known before any page's
         // references are resolved, because a reference with no text of its own
@@ -447,6 +458,44 @@ impl Build {
         }
 
         Ok(())
+    }
+
+    /// Say what the playbook asked for that this build does not do.
+    ///
+    /// Antora's extensions and UI bundles are Node, and running them is out of
+    /// reach. Saying nothing would leave whoever moved a site here to work out
+    /// from the output which of the things they configured had happened — so
+    /// each is named, once, against the playbook.
+    fn report_what_is_not_run(&self, report: &mut Report) {
+        for name in self.playbook.antora.extension_names() {
+            report.warn(
+                PLAYBOOK,
+                None,
+                format!("`{name}` is an Antora extension, and is not run"),
+            );
+        }
+
+        if !self.playbook.asciidoc.extensions.is_empty() {
+            report.warn(
+                PLAYBOOK,
+                None,
+                format!(
+                    "{} Asciidoctor extension(s) are configured, and are not run",
+                    self.playbook.asciidoc.extensions.len()
+                ),
+            );
+        }
+
+        if let Some(bundle) = &self.playbook.ui.bundle {
+            report.warn(
+                PLAYBOOK,
+                None,
+                format!(
+                    "the UI bundle `{}` is not used; the built-in page shell is",
+                    bundle.url
+                ),
+            );
+        }
     }
 
     /// A renderer for this build.

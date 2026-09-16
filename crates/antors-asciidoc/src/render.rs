@@ -26,6 +26,7 @@ use asciidoc_parser::{
         SectionType,
     },
     parser::ModificationContext,
+    warnings::WarningSeverity,
 };
 
 use crate::{
@@ -275,6 +276,14 @@ impl Renderer {
 
         let mut warnings: Vec<Warning> = document
             .warnings()
+            // The parser marks its lowest-severity diagnostics `Debug` and says
+            // a host is expected to suppress them: they report something a tool
+            // might want without suggesting the parse is wrong. The one that
+            // matters here is a block style the parser does not know — which a
+            // back end may well know, and does: a `[mermaid]` listing is drawn
+            // as a diagram, and warning about it on every page would bury
+            // everything worth reading.
+            .filter(|warning| warning.severity == WarningSeverity::Warning)
             .map(|warning| Warning::Parse {
                 message: warning.warning.to_string(),
                 line: document.origin_of(warning.source).line,
@@ -289,13 +298,10 @@ impl Renderer {
                 .map(|target| Warning::MissingInclude { target }),
         );
 
-        warnings.extend(
-            wiring
-                .links
-                .unresolved()
-                .into_iter()
-                .map(|target| Warning::UnresolvedReference { target }),
-        );
+        // An unresolved reference is not reported here: the parser has already
+        // recorded one for every target it could not resolve, with the line it
+        // was written on, and the same problem twice in a build log is one
+        // report the reader has to work out is a duplicate.
 
         Ok(Rendered {
             html,

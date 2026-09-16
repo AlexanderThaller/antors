@@ -16,32 +16,40 @@ here re-implements AsciiDoc; what it adds is Antora's model on top of it.
 
 | | |
 | --- | --- |
-| Playbook | `site`, `content.sources`, `urls`, `asciidoc.attributes`, `output`, `runtime` |
+| Playbook | the whole schema parses — `site`, `content`, `urls`, `ui`, `asciidoc`, `output`, `runtime`, `git`, `network`, `antora` |
 | Components | multiple components, multiple versions, `display_version`, `prerelease`, `start_page` |
+| Versions | from `antora.yml`, or from a content source's `version:` — `true`, a literal, or ref-name patterns |
 | Modules | `ROOT` and named modules, with their own images and attachments |
 | Resource IDs | `version@component:module:family$path` in every combination |
 | References | `xref:` across modules, components and versions; auto text from the target's title |
-| Includes | `partial$`, `example$`, tags, line ranges, `leveloffset`, nested includes |
+| Includes | `partial$`, `example$`, tags, line ranges, `leveloffset`, nested includes, bare targets that cross families |
 | Media | `image$`, `attachment$`, cross-module images, `imagesdir`/`attachmentsdir` |
 | Navigation | several `nav.adoc` per component, nested lists, list titles, external entries |
 | Page shell | navbar, navigation sidebar, breadcrumbs, version selector, outline, pagination, edit link |
 | Output | `page-aliases` redirects, site start page, `404.html`, `robots.txt`, sitemaps |
+| Diagrams | a `[mermaid]` block is drawn while the site is built, so no library is loaded in the browser |
 | Serving | `antors serve` rebuilds and reloads the open page as sources change |
 
 ### What does not, yet
 
-- **Remote content sources.** A `url:` must name a directory on this machine.
-  Antora's branch, tag and worktree selection is not implemented; a source is
-  read from the worktree it points at. The seam for it is
+Each of these is *reported* rather than skipped quietly: a build says which of
+the things the playbook configured it did not do, so a site moved here does not
+have to be diffed against Antora's to find out.
+
+- **Anything but the checked-out worktree.** A `url:` must name a directory on
+  this machine, and only the ref that is checked out is read. A source asking
+  for other branches or tags is told which ones were skipped. The seam for it is
   [`antors_content::aggregate`](crates/antors-content/src/aggregate.rs), which
   produces a `Catalog` that nothing else's shape depends on.
 - **Antora UI bundles.** The page shell is built in, in
   [`antors-ui`](crates/antors-ui). It follows the default UI's class names, so a
   stylesheet written for Antora mostly applies, but a bundle's Handlebars
   templates are not run.
+- **`ui.supplemental_files`.** Parsed, not yet applied.
 - **The search index.** No `lunr` index is written.
-- **Antora extensions.** A playbook's `antora.extensions` is parsed and ignored;
-  they are Node modules.
+- **Extensions.** `antora.extensions` and `asciidoc.extensions` are parsed and
+  named in the report; they are Node modules and are not run. A site that
+  generates pages from an extension will be missing those pages.
 
 ## Install
 
