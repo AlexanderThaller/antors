@@ -11,7 +11,6 @@ use crate::{
     },
     model::Page,
     nav,
-    toc,
 };
 
 /// Render one page.
@@ -36,7 +35,7 @@ pub fn render(page: &Page) -> String {
     out.push_str("<main class=\"article\">\n");
     out.push_str(&article::toolbar(page));
     out.push_str("<div class=\"content\">\n");
-    out.push_str(&toc::sidebar(page));
+    out.push_str(&outline(page));
     out.push_str(&article::article(page));
     out.push_str("</div>\n</main>\n");
 
@@ -52,6 +51,20 @@ pub fn render(page: &Page) -> String {
     out.push_str("</body>\n</html>\n");
 
     out
+}
+
+/// The outline, in the column the content grid holds open for it.
+///
+/// The markup inside is the back end's — the same outline it would put in a
+/// standalone page — so the entries here and the headings they point at cannot
+/// describe the document differently. All the shell adds is somewhere to put
+/// it: an `<aside>`, which says what the column *is* to a reader moving by
+/// landmark, and which the grid places.
+fn outline(page: &Page) -> String {
+    match &page.toc {
+        Some(toc) => format!("<aside class=\"toc sidebar\">\n{toc}</aside>\n"),
+        None => String::new(),
+    }
 }
 
 /// The `<head>` of a page.

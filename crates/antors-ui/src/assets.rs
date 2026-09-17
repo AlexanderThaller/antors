@@ -52,6 +52,12 @@ pub const SCRIPT: &str = include_str!("../assets/site.js");
 /// say why. That is not a hypothetical; it is what a hand-written palette did
 /// here.
 ///
+/// The back end's **outline** rules come next, also at the top level: the
+/// outline sits *beside* the document rather than in it, so nesting them under
+/// [`ARTICLE`] would put them out of reach of the very markup they style. They
+/// come before the shell's so that the shell can say where the outline goes
+/// without restating what it looks like.
+///
 /// The **shell's** rules come next, so the article's can override them where
 /// the two meet.
 ///
@@ -61,8 +67,9 @@ pub const SCRIPT: &str = include_str!("../assets/site.js");
 /// version of it here to fall behind the back end's own.
 pub fn stylesheet() -> String {
     format!(
-        "{}\n{SHELL}\n{ARTICLE} {{\n{}\n}}\n",
+        "{}\n{}\n{SHELL}\n{ARTICLE} {{\n{}\n}}\n",
         adocers_html::stylesheet_variables(),
+        adocers_html::toc_stylesheet(),
         adocers_html::document_stylesheet(),
     )
 }
@@ -116,6 +123,22 @@ mod tests {
                 "`{selector}` belongs to a standalone page, not to a site"
             );
         }
+    }
+
+    #[test]
+    fn the_back_ends_outline_rules_are_taken_and_left_unnested() {
+        let css = stylesheet();
+        let outline = css
+            .find(adocers_html::toc_stylesheet())
+            .expect("the outline block is there");
+        let nested = css.find(ARTICLE).expect("the article block is there");
+
+        // Beside the document, not inside it: nested under `article.doc` these
+        // would reach nothing, because that is not where the outline is.
+        assert!(
+            outline < nested,
+            "the outline rules are inside `{ARTICLE}`, where the outline is not"
+        );
     }
 
     #[test]

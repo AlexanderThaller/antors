@@ -49,14 +49,12 @@ pub struct Page {
     /// Every component in the site, for the explore panel.
     pub components: Vec<ComponentEntry>,
 
-    /// The page's own outline.
-    pub toc: Vec<TocEntry>,
-
-    /// How deep that outline goes, for the shell to report to the script.
-    pub toc_levels: usize,
-
-    /// What the outline is titled.
-    pub toc_title: String,
+    /// The page's own outline, as the back end rendered it.
+    ///
+    /// Markup rather than a tree: the shell decides *where* the outline goes,
+    /// and the back end decides what it looks like. Both the depth and the
+    /// title are settled before it gets here.
+    pub toc: Option<String>,
 
     /// Where this page can be edited, if anywhere.
     pub edit_url: Option<String>,
@@ -194,22 +192,6 @@ pub struct ComponentVersionEntry {
 
     /// Whether it is the version a bare reference to the component means.
     pub is_latest: bool,
-}
-
-/// One entry of a page's outline.
-#[derive(Clone, Debug)]
-pub struct TocEntry {
-    /// The anchor to link to.
-    pub id: String,
-
-    /// The heading, already rendered.
-    pub title: String,
-
-    /// How deep it sits.
-    pub level: usize,
-
-    /// The headings beneath it.
-    pub children: Vec<TocEntry>,
 }
 
 /// One labelled fact shown under a page's title.

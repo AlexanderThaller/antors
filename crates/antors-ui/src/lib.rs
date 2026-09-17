@@ -28,7 +28,6 @@ pub mod model;
 mod article;
 mod nav;
 mod shell;
-mod toc;
 
 pub use crate::shell::{
     not_found,

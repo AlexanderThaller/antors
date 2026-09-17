@@ -107,7 +107,9 @@
 
   // --- which outline entry the reader is looking at -------------------------
 
-  var tocLinks = Array.prototype.slice.call(doc.querySelectorAll('.toc-menu a[href^="#"]'))
+  // `#toc` is the back end's container, which the shell places in the outline
+  // column; `is-active` is the class its stylesheet marks the current entry with.
+  var tocLinks = Array.prototype.slice.call(doc.querySelectorAll('#toc a[href^="#"]'))
 
   if (tocLinks.length) {
     var headings = []
@@ -117,51 +119,86 @@
       if (target) headings.push({ element: target, link: link })
     })
 
-    // The entry to mark is the *last* heading the reader has scrolled past —
-    // which only ever moves one way as the page moves one way. Marking whichever
-    // heading is currently on screen instead looks right until a section title
-    // and its first subsection title arrive together, and then the mark jumps
-    // up a level and back down again as they pass.
-    var active = null
+    // Every entry whose heading is on screen is marked, not just one.
+    //
+    // A single mark has to answer "which section is the reader in?", and while
+    // a section title and its first subsection title are both in view the
+    // honest answer is "both" — so a single mark picks one and jumps up a level
+    // and back down again as they pass. A run of marks says the same thing
+    // without having to choose, and because the gutter beside every entry is
+    // already held open, a run of them reads as one bar down the side.
+    var active = []
 
     function readingLine () {
       var toolbar = doc.querySelector('.toolbar')
       return toolbar ? toolbar.getBoundingClientRect().bottom + 8 : 96
     }
 
-    function update () {
-      if (!headings.length) return
-
+    // The headings between the reading line and the foot of the window.
+    function onScreen () {
       var line = readingLine()
-      var current = headings[0]
+      var seen = []
+
+      headings.forEach(function (heading) {
+        var top = heading.element.getBoundingClientRect().top
+
+        if (top >= line && top <= window.innerHeight) seen.push(heading)
+      })
+
+      return seen
+    }
+
+    // The last heading the reader has scrolled past, for when none is on
+    // screen: an outline with no mark at all says the reader is nowhere, and
+    // between two headings a screen apart that would be most of the page.
+    function lastPassed () {
+      var line = readingLine()
+      var passed = headings[0]
 
       for (var index = 0; index < headings.length; index++) {
         if (headings[index].element.getBoundingClientRect().top > line) break
-        current = headings[index]
+        passed = headings[index]
       }
 
-      // The last section of a page may be too short to ever reach the line, so
-      // it would be unreachable without this.
-      var atBottom =
-        window.innerHeight + window.scrollY >= doc.documentElement.scrollHeight - 2
+      return passed
+    }
 
-      if (atBottom) current = headings[headings.length - 1]
+    function same (one, other) {
+      if (one.length !== other.length) return false
 
-      if (current === active) return
+      for (var index = 0; index < one.length; index++) {
+        if (one[index] !== other[index]) return false
+      }
+
+      return true
+    }
+
+    function update () {
+      if (!headings.length) return
+
+      var current = onScreen()
+
+      if (!current.length) current = [lastPassed()]
+      if (same(current, active)) return
+
       active = current
 
       tocLinks.forEach(function (link) {
         link.classList.remove('is-active')
       })
 
-      current.link.classList.add('is-active')
+      current.forEach(function (heading) {
+        heading.link.classList.add('is-active')
+      })
 
-      // A long outline scrolls independently, so the marked entry has to be
-      // brought into its own view rather than the page's.
-      var menu = current.link.closest('.toc.sidebar')
+      // A long outline scrolls independently, so the marked entries have to be
+      // brought into its own view rather than the page's. The first of the run
+      // is what to aim at: it is where the reader is, and the rest follow it.
+      var first = current[0].link
+      var menu = first.closest('.toc.sidebar')
 
       if (menu && menu.scrollHeight > menu.clientHeight) {
-        var entry = current.link.getBoundingClientRect()
+        var entry = first.getBoundingClientRect()
         var frame = menu.getBoundingClientRect()
 
         if (entry.top < frame.top || entry.bottom > frame.bottom) {

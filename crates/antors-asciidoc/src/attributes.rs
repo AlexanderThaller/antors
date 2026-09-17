@@ -113,9 +113,15 @@ impl Attributes {
         self.set("site-gen", Attribute::hard("antora"));
         self.set("site-gen-antora", Attribute::hard(""));
 
-        // The outline is drawn by the page shell, beside the article rather
-        // than inside it, so a document that asks for one inline would get two.
+        // The outline is placed by the page shell, beside the article rather
+        // than inside it. The back end renders it either way and hands it over
+        // separately; leaving `toc` set would place a second copy inline.
         self.set("toc", Attribute::unset());
+
+        // "Table of Contents" is the back end's default, which is a heading.
+        // Beside the article this is a label on a column, and wants to be
+        // shorter. Soft, so a page may still say something else.
+        self.set("toc-title", Attribute::soft("Contents"));
     }
 
     /// What the playbook's `site:` key contributes.

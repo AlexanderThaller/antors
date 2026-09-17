@@ -18,13 +18,6 @@ use asciidoc_parser::{
     Document,
     Parser,
     SafeMode,
-    blocks::{
-        Block,
-        FindBlocks,
-        IsBlock,
-        SectionBlock,
-        SectionType,
-    },
     parser::ModificationContext,
     warnings::WarningSeverity,
 };
@@ -129,30 +122,16 @@ pub struct Rendered {
     /// `:keywords:`, likewise.
     pub keywords: Option<String>,
 
-    /// The section outline, for the sidebar.
-    pub sections: Vec<Section>,
+    /// The outline, as the back end rendered it, for the shell to place.
+    ///
+    /// `None` when the page has no sections to list.
+    pub toc: Option<String>,
 
     /// Every file the parse read, for a watching build to watch.
     pub dependencies: Vec<PathBuf>,
 
     /// What went wrong that did not stop the render.
     pub warnings: Vec<Warning>,
-}
-
-/// One entry of a page's outline.
-#[derive(Clone, Debug)]
-pub struct Section {
-    /// The anchor to link to.
-    pub id: String,
-
-    /// The heading, already rendered.
-    pub title: String,
-
-    /// How deep it sits, counting the document title as zero.
-    pub level: usize,
-
-    /// The sections beneath it.
-    pub children: Vec<Section>,
 }
 
 /// Something the build should tell somebody about.
@@ -273,7 +252,7 @@ impl Renderer {
         let attributes =
             Attributes::for_page(&self.playbook, &self.catalog, component_version, page);
 
-        let html = adocers_html::render(
+        let rendered = adocers_html::render(
             &document,
             &HtmlOptions {
                 fragment: true,
@@ -284,6 +263,16 @@ impl Renderer {
                 mermaid: self.options.mermaid,
                 math: self.options.math,
 
+                // A site's outline depth is the playbook's to set, and a
+                // page's `page-toclevels` overrides it — a name the back end
+                // has no reason to know, so the answer is passed rather than
+                // the question.
+                toc_levels: Some(
+                    attribute(&document, "page-toclevels")
+                        .and_then(|levels| levels.parse().ok())
+                        .unwrap_or(self.options.toc_levels),
+                ),
+
                 // The back end adds both of these to a *page* with a script,
                 // and a page is not what it is being asked for. The site shell
                 // supplies its own copy button and its own reading mark, over
@@ -292,16 +281,12 @@ impl Renderer {
                 copy: false,
                 mark_reading: false,
             },
-        )
-        .html;
+        );
 
-        let html = wiring
-            .links
-            .resolve_media(&html, attributes.get("imagesdir").unwrap_or_default());
-
-        let depth = attribute(&document, "page-toclevels")
-            .and_then(|levels| levels.parse().ok())
-            .unwrap_or(self.options.toc_levels);
+        let html = wiring.links.resolve_media(
+            &rendered.html,
+            attributes.get("imagesdir").unwrap_or_default(),
+        );
 
         let mut warnings: Vec<Warning> = document
             .warnings()
@@ -339,7 +324,7 @@ impl Renderer {
             page_attributes: page_attributes(&document),
             description: attribute(&document, "description"),
             keywords: attribute(&document, "keywords"),
-            sections: outline(document.child_blocks(), 1, depth),
+            toc: rendered.toc,
             dependencies: wiring.includes.read(),
             warnings,
         })
@@ -440,49 +425,4 @@ fn page_attributes(document: &Document<'_>) -> BTreeMap<String, String> {
     }
 
     attributes
-}
-
-/// Collect the section outline, to `depth` levels.
-fn outline<'src>(
-    blocks: impl Iterator<Item = &'src Block<'src>>,
-    level: usize,
-    depth: usize,
-) -> Vec<Section> {
-    if level > depth {
-        return Vec::new();
-    }
-
-    let mut sections = Vec::new();
-
-    for block in blocks {
-        let Block::Section(section) = block else {
-            continue;
-        };
-
-        if is_excluded(section) {
-            continue;
-        }
-
-        // A section with no id has nothing for an outline entry to link to,
-        // and an entry that goes nowhere is worse than no entry.
-        let Some(id) = section.id() else {
-            continue;
-        };
-
-        sections.push(Section {
-            id: id.to_string(),
-            title: section.section_title().to_string(),
-            level,
-            children: outline(section.child_blocks(), level + 1, depth),
-        });
-    }
-
-    sections
-}
-
-/// Whether a section is kept out of the outline.
-fn is_excluded(section: &SectionBlock<'_>) -> bool {
-    // A discrete heading is styled like a section but owns no body, so there
-    // is nothing for an entry to point at.
-    section.section_type() == SectionType::Discrete
 }

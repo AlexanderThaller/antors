@@ -20,9 +20,9 @@ checksum = "366ffbaa4442f4684d91e2cd7c5ea7c4ed8add41959a31447066e279e432b618"
 
 [[package]]
 name = "adocers-html"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f6846290bd9f3dd5fc845dd4c1c9287d1dcb2a5676f9fcc5b259d04ee5df722"
+checksum = "b0c3f7d0c191230b6bc5ccc1cddc8b6c03d27f8e84cc931215960d885bd6c557"
 dependencies = [
  "adocers-render-core",
  "asciidoc-parser",
@@ -47,9 +47,9 @@ dependencies = [
 
 [[package]]
 name = "adocers-render-core"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9b293195e209fb944bb24f7afa9dc59b33b363a8af6c29646ea9d3b24dc71f6"
+checksum = "eae3302b1367f6ee710c8ded6976c07c2b0fca05195da44893acb6bcc61172af"
 dependencies = [
  "asciidoc-parser",
  "merman",

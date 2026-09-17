@@ -45,7 +45,6 @@ pub use crate::{
         Options,
         Rendered,
         Renderer,
-        Section,
         Warning,
         title_of,
     },

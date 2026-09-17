@@ -78,13 +78,7 @@ pub(crate) fn model(
         versions: versions(catalog, page, &url),
         components: components(catalog, page, &url),
 
-        toc: toc(&rendered.sections),
-        toc_levels: rendered
-            .page_attributes
-            .get("toclevels")
-            .and_then(|levels| levels.parse().ok())
-            .unwrap_or(2),
-        toc_title: "Contents".to_string(),
+        toc: rendered.toc.clone(),
 
         edit_url: edit_url(page, rendered),
 
@@ -359,19 +353,6 @@ fn components(catalog: &Catalog, page: &SourceFile, url: &str) -> Vec<ui::Compon
                 is_current: component.name == page.key.component,
                 versions,
             })
-        })
-        .collect()
-}
-
-/// The page's outline.
-fn toc(sections: &[antors_asciidoc::Section]) -> Vec<ui::TocEntry> {
-    sections
-        .iter()
-        .map(|section| ui::TocEntry {
-            id: section.id.clone(),
-            title: section.title.clone(),
-            level: section.level,
-            children: toc(&section.children),
         })
         .collect()
 }

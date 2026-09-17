@@ -427,29 +427,18 @@ main.article > .content > article.doc { grid-column: 1; grid-row: 1; }
   font-size: 0.8125rem;
 }
 
-.toc-menu h3 {
-  margin: 0 0 0.5rem;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
+/* What the entries look like is the back end's `toc_stylesheet()`, taken
+   whole. All that is left here is the one thing it cannot know: it writes the
+   margin an outline needs when it sits in the flow of a standalone page, and
+   this one is in a column of its own that already has padding. */
+.toc.sidebar > #toc { margin: 0; }
 
-.toc-menu ul { margin: 0; padding: 0; list-style: none; }
-.toc-menu ul ul { padding-left: 0.75rem; }
-
-.toc-menu a {
-  display: block;
-  padding: 0.15rem 0 0.15rem 0.6rem;
-  border-left: 2px solid transparent;
-  color: var(--muted);
-  text-decoration: none;
-  line-height: 1.4;
-}
-
-.toc-menu a:hover { color: var(--fg); }
-.toc-menu a.is-active { border-left-color: var(--accent); color: var(--accent); }
+/* The back end marks one entry and colours its text to say which. The mark
+   here covers every section on screen instead, so the bar down the side of the
+   run is what says where the reader is — and recolouring seven entries at once
+   would shout it while saying less. The gutter was held open for exactly this. */
+.toc.sidebar #toc a.is-active { color: var(--muted); }
+.toc.sidebar #toc a.is-active:hover { color: var(--fg); }
 
 article.doc { min-width: 0; padding: 1.5rem 0 0; }
 
