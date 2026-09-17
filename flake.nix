@@ -297,6 +297,13 @@
 
               pkgs.git
             ];
+
+            # The nightly `rustfmt` is dynamically linked against zlib and
+            # carries no runpath that finds it, so it does not start in a shell
+            # that has not put zlib where the loader looks — `cargo fmt` fails
+            # with `libz.so.1: cannot open shared object file`. Nothing else
+            # here needs this.
+            LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.zlib ];
           };
         }
       );

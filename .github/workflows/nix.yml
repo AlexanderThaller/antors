@@ -1,0 +1,53 @@
+name: Nix
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  nix:
+    runs-on: ubuntu-latest
+
+    steps:
+      # persist-credentials: false because nothing downstream authenticates
+      # to git. The default would leave GITHUB_TOKEN in .git/config as an
+      # http.extraheader for the rest of the job -- readable by every build
+      # script Nix and Cargo go on to run.
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
+
+      - name: Set up the Nix binary cache
+        uses: DeterminateSystems/magic-nix-cache-action@84c0677f58dcedf3b91f8223ce36a9ea5b3c84b7 # v15
+
+      # `nix develop` puts the toolchain this project pins on PATH -- stable
+      # rustc, cargo and clippy, and the separate nightly whose rustfmt is the
+      # only one that accepts the options in `.rustfmt.toml` -- rather than
+      # whatever `cargo` the runner happens to have. It is the same shell a
+      # contributor gets locally, so a green check here means the same thing
+      # it means on their machine.
+      - name: Test, clippy and rustfmt
+        run: |
+          nix develop --command cargo test
+          nix develop --command cargo clippy --all-targets -- -D warnings
+          nix develop --command cargo fmt --check
+
+      # Read-only: pushing the image is publish-image.yml's job, gated to
+      # pushes on main. Building it here is what catches a flake.nix change
+      # that breaks the image, or a Cargo.lock change that changes what
+      # `cargoLock.lockFile` has to vendor, on the pull request that made it
+      # rather than after it has landed.
+      #
+      # `.#container` is the static musl build, which is a different compile
+      # from `.#antors` above and worth its own check.
+      - name: Build antors and the container image
+        run: nix build '.#antors' '.#container'
