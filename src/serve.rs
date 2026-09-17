@@ -198,7 +198,7 @@ fn start_watching(
     build: Arc<Build>,
     reload: watch::Sender<u64>,
 ) -> Result<impl std::fmt::Debug> {
-    let output = playbook.output.dir.canonicalize().ok();
+    let output = resolved(&playbook.output.dir);
 
     let mut debouncer = new_debouncer(DEBOUNCE, None, move |result: DebounceEventResult| {
         let Ok(events) = result else {
@@ -206,7 +206,9 @@ fn start_watching(
         };
 
         // A rebuild writes into the output directory, and watching that would
-        // make every rebuild trigger the next one.
+        // make every rebuild trigger the next one. Both sides of the
+        // comparison go through [`resolved`], so an output directory inside a
+        // watched one is recognized however the playbook happened to spell it.
         let touched = events.iter().any(|event| {
             matches!(
                 event.kind,
@@ -214,7 +216,7 @@ fn start_watching(
             ) && event
                 .paths
                 .iter()
-                .any(|path| output.as_ref().is_none_or(|out| !path.starts_with(out)))
+                .any(|path| !resolved(path).starts_with(&output))
         });
 
         if !touched {
@@ -246,6 +248,14 @@ fn start_watching(
 /// Only the start paths are watched, not the whole repository: a documentation
 /// source inside a code repository would otherwise rebuild the site every time
 /// a build wrote an object file.
+///
+/// The roots are [`resolved`] rather than watched as the playbook spells them,
+/// because the watcher builds the path in every event out of the path it was
+/// handed. Watching `../../docs` reports a change as `<cwd>/../../docs/...`,
+/// and `Path::starts_with` compares component by component, so a `..` left in
+/// the middle keeps that path from ever matching the output directory —
+/// whereupon a rebuild's own writes look like a change, and the rebuilding
+/// never stops.
 fn watch_roots(playbook: &Playbook) -> Vec<PathBuf> {
     let mut roots = Vec::new();
 
@@ -258,12 +268,43 @@ fn watch_roots(playbook: &Playbook) -> Vec<PathBuf> {
             let root = Path::new(&source.url).join(start_path);
 
             if root.is_dir() {
-                roots.push(root);
+                roots.push(resolved(&root));
             }
         }
     }
 
     roots
+}
+
+/// A path in the form the watcher's own paths take: absolute, with every
+/// symbolic link and `.` and `..` gone.
+///
+/// Watching and filtering only agree if both sides are spelled the same way. A
+/// playbook says `url: ../..` and `dir: ./build/site`, and the watcher follows
+/// symbolic links when it walks a directory, so a change under the output
+/// directory can arrive named in any number of ways — all of them different
+/// from the output directory as written. Resolving both ends settles it.
+///
+/// A path that does not exist — a file an event reports as removed, or an
+/// output directory no build has written yet — is resolved as far as it does
+/// exist, so the answer is still the one it will have once it is there.
+fn resolved(path: &Path) -> PathBuf {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir().unwrap_or_default().join(path)
+    };
+
+    if let Ok(canonical) = absolute.canonicalize() {
+        return canonical;
+    }
+
+    // Nothing left to climb: hand back what there is rather than looping.
+    let (Some(parent), Some(name)) = (absolute.parent(), absolute.file_name()) else {
+        return absolute;
+    };
+
+    resolved(parent).join(name)
 }
 
 /// Answer a reload request once the counter has moved past `since`.
@@ -501,4 +542,50 @@ fn report_changes(report: &antors_site::Report) {
         "antors: rebuilt — {} pages, {} other files",
         report.pages, report.files
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::{
+        Path,
+        PathBuf,
+    };
+
+    use super::resolved;
+
+    /// The working directory, in the form [`resolved`] hands back.
+    fn here() -> PathBuf {
+        std::env::current_dir()
+            .expect("a working directory")
+            .canonicalize()
+            .expect("a working directory that exists")
+    }
+
+    #[test]
+    fn a_relative_path_resolves_against_the_working_directory() {
+        assert_eq!(resolved(Path::new("./src")), here().join("src"));
+        assert_eq!(resolved(Path::new("src/../src")), here().join("src"));
+    }
+
+    #[test]
+    fn a_path_that_does_not_exist_still_resolves() {
+        // The output directory before the first build has written it, and the
+        // path an event reports for a file that has just been removed.
+        assert_eq!(
+            resolved(Path::new("./build/site/index.html")),
+            here().join("build/site/index.html")
+        );
+    }
+
+    /// The bug this guards against: an output directory below a watched root
+    /// went unrecognized, because one side of the comparison was canonical and
+    /// the other was the path as the playbook spelled it, so every rebuild
+    /// triggered the next one.
+    #[test]
+    fn output_below_a_watched_root_is_recognized_however_it_is_spelled() {
+        let output = resolved(Path::new("./build/site"));
+        let written = resolved(&Path::new("./src/..").join("build/site/index.html"));
+
+        assert!(written.starts_with(&output));
+    }
 }
