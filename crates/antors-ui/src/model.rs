@@ -59,6 +59,16 @@ pub struct Page {
     /// Where this page can be edited, if anywhere.
     pub edit_url: Option<String>,
 
+    /// Where this page is published as a PDF, relative to the page itself.
+    ///
+    /// `None` when the build did not write one — either because it was not
+    /// asked to, or because this page would not typeset. A button that leads
+    /// to a file that is not there is worse than no button.
+    pub pdf_url: Option<String>,
+
+    /// Where this component version is published as a single PDF, likewise.
+    pub manual_url: Option<String>,
+
     /// The previous and next pages in navigation order.
     pub previous: Option<Link>,
 

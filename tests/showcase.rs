@@ -38,6 +38,7 @@ fn build(name: &str) -> (PathBuf, Report) {
             render: antors_site::build::RenderOptions::default(),
             clean: true,
             tags_page: true,
+            pdf: false,
         },
     )
     .run()
@@ -206,7 +207,7 @@ fn a_bare_include_target_may_climb_into_another_family() {
 
 #[test]
 fn tagged_regions_of_an_example_are_included() {
-    let (out, _) = build("tags");
+    let (out, _) = build("example-tags");
     let html = page(&out, "showcase/2.0/code.html");
 
     // The highlighter wraps each token in a span of its own, so the assertion
@@ -470,6 +471,7 @@ fn the_tags_page_can_be_switched_off() {
             render: antors_site::build::RenderOptions::default(),
             clean: true,
             tags_page: false,
+            pdf: false,
         },
     )
     .run()
@@ -511,6 +513,7 @@ fn a_page_left_over_from_an_earlier_build_is_reported() {
             // directory could not leave anything behind to find.
             clean: false,
             tags_page: true,
+            pdf: false,
         },
     )
     .run()
@@ -569,4 +572,217 @@ fn the_playbook_is_told_what_this_build_does_not_do() {
     );
 
     assert!(playbook[0].contains("UI bundle"), "{}", playbook[0]);
+}
+
+/// The PDFs.
+///
+/// Off unless the build is asked for them, which is what every test above
+/// relies on: Typst lays out every page from scratch, and a suite that paid for
+/// that on each build would be a suite nobody runs.
+#[cfg(feature = "pdf")]
+mod pdf {
+    use super::{
+        Build,
+        Options,
+        Path,
+        PathBuf,
+        Playbook,
+        Report,
+        page,
+        tree,
+    };
+
+    /// The one page of the showcase that will not typeset, and why.
+    ///
+    /// `adocers-typst` 0.3 writes unconstrained bold as `*b*old`. Typst reads
+    /// that as an unclosed delimiter: a `*` with a word character after it does
+    /// not close strong emphasis, so the whole document is refused.
+    /// `text.adoc` writes `Unconstrained: **b**old, __i__talic`, and is
+    /// therefore the one page here that has no PDF.
+    ///
+    /// Delete this and the allowances below when the back end emits
+    /// `#strong[b]old` instead.
+    const WILL_NOT_TYPESET: &str = "showcase/2.0/text.pdf";
+
+    /// Build the showcase with the PDFs switched on.
+    fn build(name: &str) -> (PathBuf, Report) {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+        let mut playbook = Playbook::load(&root.join("resources/showcase/antora-playbook.yml"))
+            .expect("the showcase playbook loads");
+
+        let out = root.join("target/tests").join(name);
+        playbook.output.dir.clone_from(&out);
+
+        let report = Build::new(
+            playbook,
+            Options {
+                render: antors_site::build::RenderOptions::default(),
+                clean: true,
+                tags_page: true,
+                pdf: true,
+            },
+        )
+        .run()
+        .expect("the showcase builds");
+
+        (out, report)
+    }
+
+    /// Every PDF this build typeset, which is not every PDF it wrote: the
+    /// showcase publishes one as an attachment, and that one is copied.
+    fn typeset(out: &Path) -> Vec<String> {
+        tree(out)
+            .into_iter()
+            .filter(|path| {
+                Path::new(path)
+                    .extension()
+                    .is_some_and(|extension| extension == "pdf")
+                    && !path.contains("_attachments")
+            })
+            .collect()
+    }
+
+    /// Whether a file is a PDF, rather than merely being called one.
+    fn is_a_pdf(out: &Path, path: &str) -> bool {
+        let bytes = std::fs::read(out.join(path))
+            .unwrap_or_else(|error| panic!("`{path}` was written: {error}"));
+
+        bytes.starts_with(b"%PDF") && bytes.len() > 1000
+    }
+
+    #[test]
+    fn a_build_that_was_not_asked_for_them_writes_none() {
+        let (out, _) = super::build("no-pdfs");
+
+        assert!(typeset(&out).is_empty(), "{:#?}", typeset(&out));
+        assert!(!page(&out, "showcase/2.0/media.html").contains("page-pdf"));
+    }
+
+    #[test]
+    fn every_page_is_typeset_beside_its_html() {
+        let (out, report) = build("pdfs");
+
+        for path in [
+            "showcase/2.0/index.pdf",
+            "showcase/2.0/media.pdf",
+            "showcase/2.0/guide/getting-started.pdf",
+            "showcase/2.0/api/overview.pdf",
+            "showcase/1.0/legacy.pdf",
+            "sidecar/index.pdf",
+        ] {
+            assert!(is_a_pdf(&out, path), "`{path}` is not a PDF");
+        }
+
+        // One per page, less the one the back end will not take, plus the two
+        // component versions that have a manual. Counted rather than listed so
+        // that a page added to the showcase has to be accounted for here.
+        assert!(!out.join(WILL_NOT_TYPESET).exists());
+        assert_eq!(typeset(&out).len(), report.pages - 1 + 2);
+    }
+
+    #[test]
+    fn a_page_the_back_end_will_not_take_costs_only_itself() {
+        let (out, report) = build("pdf-refused");
+
+        let refused: Vec<&str> = report
+            .problems
+            .iter()
+            .filter(|problem| {
+                problem
+                    .message
+                    .starts_with("this page could not be typeset")
+            })
+            .map(|problem| problem.message.as_str())
+            .collect();
+
+        assert_eq!(refused.len(), 1, "{refused:#?}");
+
+        // The page it could not take is named against itself, and the manual
+        // says what that cost rather than silently coming up a page short.
+        assert!(
+            report
+                .problems
+                .iter()
+                .any(|problem| problem.message.contains("missing from this version\'s PDF")),
+            "{:#?}",
+            report.problems
+        );
+
+        // And the manual was still made, out of the pages that did typeset.
+        assert!(is_a_pdf(&out, "showcase/2.0/showcase-2.0.pdf"));
+    }
+
+    #[test]
+    fn every_component_version_of_more_than_one_page_is_typeset_whole() {
+        let (out, _) = build("manuals");
+
+        assert!(is_a_pdf(&out, "showcase/2.0/showcase-2.0.pdf"));
+        assert!(is_a_pdf(&out, "showcase/1.0/showcase-1.0.pdf"));
+
+        // A manual of one page would be that page under a second name.
+        assert!(!out.join("sidecar/sidecar.pdf").exists());
+    }
+
+    #[test]
+    fn a_manual_holds_every_page_of_its_version() {
+        let (out, _) = build("manual-contents");
+
+        // Bigger than any one page of it, and bigger than all of them would be
+        // if it had only picked one up.
+        let manual = std::fs::metadata(out.join("showcase/1.0/showcase-1.0.pdf"))
+            .expect("the manual was written")
+            .len();
+
+        let one = std::fs::metadata(out.join("showcase/1.0/legacy.pdf"))
+            .expect("the page was written")
+            .len();
+
+        assert!(
+            manual > one,
+            "the manual is no bigger than one of its pages"
+        );
+    }
+
+    #[test]
+    fn a_page_offers_both_of_its_pdfs() {
+        let (out, _) = build("pdf-buttons");
+        let html = page(&out, "showcase/2.0/guide/getting-started.html");
+
+        assert!(html.contains(r#"<div class="page-pdf">"#), "{html}");
+        assert!(
+            html.contains(r#"href="getting-started.pdf" download="Getting started.pdf""#),
+            "the page\'s own PDF is not offered"
+        );
+
+        // Written from where the reader is standing, like every other link in
+        // the shell.
+        assert!(
+            html.contains(r#"href="../showcase-2.0.pdf" download="Showcase 2.0 (current).pdf""#),
+            "the manual is not offered from the page it is offered on"
+        );
+    }
+
+    #[test]
+    fn a_page_with_no_pdf_offers_none() {
+        let (out, _) = build("pdf-refused-button");
+        let html = page(&out, "showcase/2.0/text.html");
+
+        assert!(!html.contains("pdf-page"), "{html}");
+
+        // The manual is still there to offer, and still offered.
+        assert!(html.contains("pdf-manual"), "{html}");
+    }
+
+    #[test]
+    fn a_component_version_of_one_page_offers_only_that_page() {
+        let (out, _) = build("pdf-one-page");
+        let html = page(&out, "sidecar/index.html");
+
+        assert!(
+            html.contains(r#"href="index.pdf" download="Sidecar.pdf""#),
+            "{html}"
+        );
+        assert!(!html.contains("pdf-manual"), "{html}");
+    }
 }

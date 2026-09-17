@@ -70,6 +70,14 @@ pub struct Options {
     /// Whether a component version whose pages carry `:page-tags:` gets a page
     /// gathering them.
     pub tags_page: bool,
+
+    /// Whether every page, and every component version, is also written as a
+    /// PDF.
+    ///
+    /// Off by default: Typst lays out every page from scratch, which costs far
+    /// more than everything else a build does put together. A site that wants
+    /// the export buttons asks for them.
+    pub pdf: bool,
 }
 
 /// Why a build could not run.
@@ -132,6 +140,14 @@ impl Navigation {
     /// The page after the one at `url`.
     pub fn next(&self, url: &str) -> Option<&nav::Item> {
         self.order.get(self.index_of(url)? + 1)
+    }
+
+    /// Every page the navigation links to, in the order it links to them.
+    ///
+    /// Which is also the order a manual reads in.
+    #[cfg(feature = "pdf")]
+    pub(crate) fn order(&self) -> &[nav::Item] {
+        &self.order
     }
 
     /// Where `url` sits in the navigation order.
@@ -200,8 +216,15 @@ impl Build {
             writer.clean()?;
         }
 
-        self.write_pages(&catalog, &navigation, &mut writer, &mut report)?;
+        // The resources first, because the PDF back end reads the images it
+        // places off disk rather than out of the catalog; then the PDFs,
+        // because a page draws a button for each of the ones that were
+        // written.
         Self::write_resources(&catalog, &mut writer, &mut report);
+
+        let pdfs = self.write_pdfs(&catalog, &navigation, &mut writer, &mut report)?;
+
+        self.write_pages(&catalog, &navigation, &pdfs, &mut writer, &mut report)?;
         self.write_redirects(&catalog, &mut writer, &mut report)?;
         self.write_site_files(&catalog, &mut writer, &mut report)?;
 
@@ -314,11 +337,56 @@ impl Build {
         navigation
     }
 
+    /// Typeset and write every PDF, if this build was asked for them.
+    ///
+    /// A binary built without the `pdf` feature has no typesetter in it, so it
+    /// says so rather than writing nothing and leaving whoever passed the flag
+    /// to work out why the buttons never appeared.
+    #[cfg_attr(
+        not(feature = "pdf"),
+        expect(
+            clippy::unnecessary_wraps,
+            reason = "the signature is the one the pdf feature's version needs"
+        )
+    )]
+    fn write_pdfs(
+        &self,
+        catalog: &Arc<Catalog>,
+        navigation: &BTreeMap<(String, String), Navigation>,
+        writer: &mut Writer,
+        report: &mut Report,
+    ) -> Result<crate::pdf::Pdfs, BuildError> {
+        if !self.options.pdf {
+            return Ok(crate::pdf::Pdfs::default());
+        }
+
+        #[cfg(feature = "pdf")]
+        {
+            crate::pdf::write(catalog, navigation, &self.renderer(catalog), writer, report)
+        }
+
+        #[cfg(not(feature = "pdf"))]
+        {
+            let _ = (catalog, navigation, writer);
+
+            report.warn(
+                PLAYBOOK,
+                None,
+                "PDFs were asked for, and this build of antors was compiled without the `pdf` \
+                 feature"
+                    .to_string(),
+            );
+
+            Ok(crate::pdf::Pdfs::default())
+        }
+    }
+
     /// Render and write every page.
     fn write_pages(
         &self,
         catalog: &Arc<Catalog>,
         navigation: &BTreeMap<(String, String), Navigation>,
+        pdfs: &crate::pdf::Pdfs,
         writer: &mut Writer,
         report: &mut Report,
     ) -> Result<(), BuildError> {
@@ -356,6 +424,7 @@ impl Build {
                 catalog,
                 component_version,
                 navigation,
+                pdfs,
                 page,
                 &article,
             );

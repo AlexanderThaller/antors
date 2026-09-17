@@ -99,6 +99,10 @@ pub(crate) struct BuildArgs {
     #[arg(long)]
     pub(crate) no_tags_page: bool,
 
+    /// Also write every page, and every component version, as a PDF.
+    #[arg(long)]
+    pub(crate) pdf: bool,
+
     /// Say nothing unless something went wrong.
     #[arg(short, long)]
     pub(crate) quiet: bool,

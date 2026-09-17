@@ -40,6 +40,15 @@ impl Writer {
         }
     }
 
+    /// The directory the site is written into.
+    ///
+    /// The PDF back end reads the images it places off disk rather than out of
+    /// the catalog, so it needs to be told where this build has just put them.
+    #[cfg(feature = "pdf")]
+    pub(crate) fn root(&self) -> &Path {
+        &self.root
+    }
+
     /// The pages in the output directory that this build did not write.
     ///
     /// A site is written over whatever was there before, and a page that has

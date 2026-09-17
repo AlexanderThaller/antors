@@ -12,6 +12,7 @@ categories = ["text-processing"]
 [dependencies]
 adocers-html.workspace = true
 adocers-render-core.workspace = true
+adocers-typst = { workspace = true, optional = true }
 antors-content.workspace = true
 antors-model.workspace = true
 asciidoc-parser.workspace = true
@@ -25,10 +26,16 @@ thiserror.workspace = true
 all-features = true
 
 [features]
-default = ["highlight", "math", "mermaid"]
+default = ["highlight", "math", "mermaid", "pdf"]
 highlight = ["adocers-html/highlight"]
-math = ["adocers-html/math"]
-mermaid = ["adocers-html/mermaid"]
+math = ["adocers-html/math", "adocers-typst?/math"]
+mermaid = ["adocers-html/mermaid", "adocers-typst?/mermaid"]
+
+# Typeset a page, and a whole component version, as a PDF. It brings Typst in,
+# which is a large dependency to build and to carry — so it is a feature,
+# although a default one: a documentation site that cannot be printed is worth
+# less than the build time it saves.
+pdf = ["dep:adocers-typst"]
 
 [lints]
 workspace = true

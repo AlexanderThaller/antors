@@ -31,6 +31,8 @@ pub mod details;
 pub mod include;
 pub mod links;
 pub mod nav;
+#[cfg(feature = "pdf")]
+pub mod pdf;
 
 mod render;
 
@@ -48,4 +50,10 @@ pub use crate::{
         Warning,
         title_of,
     },
+};
+
+#[cfg(feature = "pdf")]
+pub use crate::pdf::{
+    Pdf,
+    PdfError,
 };

@@ -71,6 +71,15 @@ pub struct Links {
     /// any one of them — they are stored absolute and relativized per page.
     page_url: Option<String>,
 
+    /// The site's own address, for a file that is read away from the site.
+    ///
+    /// A PDF is downloaded and opened somewhere else, where a relative link
+    /// points at nothing. When the site knows its own address, every link in
+    /// one is written against it. When it does not there is nothing better to
+    /// write than what the page itself would have said, so that is what is
+    /// written.
+    site_url: Option<String>,
+
     /// Targets that named nothing, so the build can report them.
     unresolved: RefCell<Vec<String>>,
 
@@ -87,6 +96,7 @@ impl Links {
             document: RefCell::new(None),
             page,
             page_url: Some(page_url),
+            site_url: None,
             unresolved: RefCell::new(Vec::new()),
             fallback: DefaultPathResolver::default(),
         }
@@ -100,13 +110,34 @@ impl Links {
             document: RefCell::new(None),
             page,
             page_url: None,
+            site_url: None,
             unresolved: RefCell::new(Vec::new()),
             fallback: DefaultPathResolver::default(),
         }
     }
 
+    /// Write every link against `site_url`, for a file that leaves the site.
+    ///
+    /// `None` changes nothing, which is what a site that does not know its own
+    /// address gets.
+    #[must_use]
+    pub fn away_from(mut self, site_url: Option<String>) -> Self {
+        self.site_url = site_url;
+        self
+    }
+
     /// The link to `url` as this file should write it.
     fn link_to(&self, url: &str) -> String {
+        // An external target has nothing to be made relative or absolute
+        // against; it is already somewhere else.
+        if url.starts_with("http://") || url.starts_with("https://") {
+            return url.to_string();
+        }
+
+        if let Some(base) = &self.site_url {
+            return format!("{}{url}", base.trim_end_matches('/'));
+        }
+
         match &self.page_url {
             Some(from) => relativize(from, url),
             None => url.to_string(),

@@ -13,7 +13,10 @@ use antors_content::{
     ComponentVersion,
     SourceFile,
 };
-use antors_model::playbook::Playbook;
+use antors_model::{
+    playbook::Playbook,
+    resource::Key,
+};
 use asciidoc_parser::{
     Document,
     Parser,
@@ -336,29 +339,50 @@ impl Renderer {
         page: &SourceFile,
         component_version: &ComponentVersion,
     ) -> (Parser, Wiring) {
-        let includes = Rc::new(include::Resolver::new(
-            Arc::clone(&self.catalog),
-            page.key.clone(),
-        ));
+        let attributes =
+            Attributes::for_page(&self.playbook, &self.catalog, component_version, page);
 
-        let links = Rc::new(Links::new(
+        let links = Links::new(
             Arc::clone(&self.catalog),
             page.key.clone(),
             page.url().unwrap_or_default().to_string(),
-        ));
+        );
+
+        self.parser_with(
+            page.key.clone(),
+            &page.relative_src_path,
+            &attributes,
+            links,
+        )
+    }
+
+    /// Build a parser for a source that resolves against `key`, with the
+    /// attributes and the link resolver the caller has decided on.
+    ///
+    /// The page path is what [`parser_for`](Self::parser_for) supplies; a PDF
+    /// wants the same seams with `imagesdir` pointing at the files on disk
+    /// rather than at a URL, and a whole component version is parsed as one
+    /// source that belongs to no page at all.
+    pub(crate) fn parser_with(
+        &self,
+        key: Key,
+        file_name: &str,
+        attributes: &Attributes,
+        links: Links,
+    ) -> (Parser, Wiring) {
+        let includes = Rc::new(include::Resolver::new(Arc::clone(&self.catalog), key));
+        let links = Rc::new(links);
 
         let mut parser = Parser::default()
             // A site build reads files the author named and nothing else. The
             // include handler enforces that by only resolving what is in the
             // catalog, so the safe mode is belt to its braces.
             .with_safe_mode(SafeMode::Safe)
-            .with_primary_file_name(&page.relative_src_path)
+            .with_primary_file_name(file_name)
             .with_include_file_handler(Rc::clone(&includes))
             .with_path_resolver(Shared(Rc::clone(&links)));
 
-        for (name, attribute) in
-            Attributes::for_page(&self.playbook, &self.catalog, component_version, page).iter()
-        {
+        for (name, attribute) in attributes.iter() {
             let context = if attribute.soft {
                 ModificationContext::Anywhere
             } else {
@@ -373,15 +397,33 @@ impl Renderer {
 
         (parser, Wiring { includes, links })
     }
+
+    /// The build's configuration, for a back end that needs to read it.
+    #[cfg(feature = "pdf")]
+    pub(crate) fn playbook(&self) -> &Playbook {
+        &self.playbook
+    }
+
+    /// Every resource in the site.
+    #[cfg(feature = "pdf")]
+    pub(crate) fn catalog(&self) -> &Arc<Catalog> {
+        &self.catalog
+    }
+
+    /// What to leave out.
+    #[cfg(feature = "pdf")]
+    pub(crate) fn options(&self) -> Options {
+        self.options
+    }
 }
 
 /// The handles a parse leaves behind, for reading its results afterwards.
-struct Wiring {
+pub(crate) struct Wiring {
     /// What the include directives resolved to.
-    includes: Rc<include::Resolver>,
+    pub(crate) includes: Rc<include::Resolver>,
 
     /// What the references resolved to.
-    links: Rc<Links>,
+    pub(crate) links: Rc<Links>,
 }
 
 /// Parse one page's header, without a site around it.

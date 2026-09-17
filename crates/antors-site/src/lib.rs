@@ -28,6 +28,7 @@ pub mod build;
 pub mod report;
 
 mod page;
+mod pdf;
 mod sitemap;
 mod tags;
 mod write;

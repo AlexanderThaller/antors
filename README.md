@@ -33,6 +33,7 @@ here re-implements AsciiDoc; what it adds is Antora's model on top of it.
 | Diagrams | a `[mermaid]` block is drawn while the site is built, so no library is loaded in the browser and it prints |
 | Metadata | a document's author, revision, status and tags are shown under its title — see [Beyond Antora](#beyond-antora) |
 | Tags | `:page-tags:` gathers into a generated `tags.adoc` per component version |
+| PDF | `--pdf` writes every page, and every component version, as a PDF, and puts an export button on each page — see [PDF export](#pdf-export) |
 | Serving | `antors serve` rebuilds and reloads the open page as sources change |
 
 ### What does not, yet
@@ -90,6 +91,7 @@ antors --strict                   # fail the build on a warning
 | `--no-math` | Show equations as the notation they were written in. |
 | `--no-icons` | Mark admonitions with their label instead of an icon. |
 | `--no-tags-page` | Do not generate the page that gathers every `:page-tags:` entry. |
+| `--pdf` | Also write every page, and every component version, as a PDF. |
 
 ### serve
 
@@ -159,6 +161,52 @@ the outline beside the text. That, and the handful of things the back end does
 not style — a keyboard key, a button, a link to an attachment.
 
 [`adocers-html`]: https://crates.io/crates/adocers-html
+
+### PDF export
+
+`--pdf` writes two kinds of file beside the site, and puts a pair of buttons in
+each page's toolbar for them:
+
+```
+antors --pdf
+```
+
+| | |
+| --- | --- |
+| `showcase/2.0/media.pdf` | one page, beside its own `.html` |
+| `showcase/2.0/showcase-2.0.pdf` | every page of that component version, in navigation order, with a table of contents |
+
+The typesetting is [`adocers-typst`]'s, so a page here and a standalone
+`AsciiDoc` document typeset by `adocers` come out the same. Typst is compiled
+in, so there is no LaTeX to install, no headless browser to drive and no fonts
+to fetch — the fonts are the ones Typst embeds.
+
+It is off by default because it is not cheap: Typst lays out every page from
+scratch, which costs more than everything else a build does put together. The
+buttons appear only for the files a build actually wrote, so a page that would
+not typeset is reported and gets no button rather than a button leading
+nowhere — and the component version's PDF is still made, out of the pages that
+did.
+
+Three things are worth knowing:
+
+- **Links leave the site.** A PDF is read somewhere else, where a relative link
+  points at nothing, so when the playbook sets `site.url` every link in a PDF is
+  written against it.
+- **Images are read off disk**, from the output directory, which is why the PDFs
+  are written after the images are copied. A block image that names *another*
+  module — `image::guide:screenshot.svg[]` — is named in the text rather than
+  drawn: the back end looks a block image up by the path the author wrote, and a
+  resource ID is not a path.
+- **Section IDs are made unique per page** in a component version's PDF. Two
+  pages with a section called "Overview" would otherwise generate one ID twice,
+  and Typst will not lay out a document that points at a label defined more than
+  once.
+
+The `pdf` feature is on by default and brings Typst with it. `--no-default-features`
+leaves it out, and a build that is asked for PDFs without it says so.
+
+[`adocers-typst`]: https://crates.io/crates/adocers-typst
 
 ### The tags page
 
@@ -277,6 +325,17 @@ all are visible in `compare.sh`:
 | Example captions | An admonition-styled example block advances the example counter. A bug. |
 | `image::x[window=_blank]` | The `window` attribute is dropped. A bug. |
 | `video::ID[vimeo]` | The provider is ignored and a plain `<video>` is rendered. Missing. |
+
+### In the PDF back end
+
+These are `adocers-typst`'s rather than this project's, and each costs a whole
+PDF rather than a paragraph of one — so they are named here and reported by name
+when a build hits them:
+
+| | |
+| --- | --- |
+| Unconstrained emphasis | `**b**old` becomes `*b*old`, which Typst reads as an unclosed delimiter: a `*` with a word character after it does not close strong emphasis. The page will not typeset. `#strong[b]old` would. |
+| `imagesdir` for block images | A block `image::` is looked for under the base directory rather than under `imagesdir`, so the two kinds of image resolve differently. This is worked around here by making `imagesdir` absolute and pointing the base at the same directory — which is also why a block image from another module is named rather than drawn. |
 
 ## License
 

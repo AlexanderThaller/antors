@@ -22,7 +22,10 @@ use antors_model::{
 };
 use antors_ui::model as ui;
 
-use crate::build::Navigation;
+use crate::{
+    build::Navigation,
+    pdf::Pdfs,
+};
 
 /// Build the shell's model for one page.
 pub(crate) fn model(
@@ -30,6 +33,7 @@ pub(crate) fn model(
     catalog: &Catalog,
     component_version: &ComponentVersion,
     navigation: &Navigation,
+    pdfs: &Pdfs,
     page: &SourceFile,
     rendered: &Rendered,
 ) -> ui::Page {
@@ -81,6 +85,12 @@ pub(crate) fn model(
         toc: rendered.toc.clone(),
 
         edit_url: edit_url(page, rendered),
+
+        pdf_url: pdfs.page(&page.key).map(|pdf| relativize(&url, pdf)),
+
+        manual_url: pdfs
+            .manual(&descriptor.name, &descriptor.version())
+            .map(|manual| relativize(&url, manual)),
 
         previous: navigation
             .previous(&url)

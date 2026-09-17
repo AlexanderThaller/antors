@@ -387,6 +387,30 @@ main.article { flex: 1; min-width: 0; }
    says so rather than looking like the same page somewhere else. */
 .version-menu .version.is-missing { color: var(--muted); font-style: italic; }
 
+/* The PDF links are a pair rather than one thing — this page, and everything
+   in this version of the component — so they are drawn as one control split
+   down the middle. Two separate buttons would read as two unrelated actions
+   rather than as the same action at two scopes. */
+.page-pdf {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.page-pdf a {
+  display: flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.page-pdf a + a { border-left: 1px solid var(--rule); }
+.page-pdf a:hover { background: var(--sidebar-bg); color: var(--accent); }
+
 .edit-this-page { flex: none; }
 .edit-this-page a { color: var(--muted); }
 
@@ -581,6 +605,11 @@ body.-toc .toc.sidebar { display: none; }
 
   .nav-container.is-open { transform: none; }
   main.article > .content { padding: 0 1rem 3rem; }
+
+  /* The toolbar is out of room here, and a whole manual is not what somebody
+     on a phone came for. The page's own PDF stays. */
+  .page-pdf .pdf-manual { display: none; }
+  .page-pdf:not(:has(.pdf-page)) { display: none; }
 }
 
 @media print {
