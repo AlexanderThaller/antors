@@ -189,26 +189,40 @@ because most of those allocations are not Rust's. The tree-sitter grammars are C
 and call `malloc` themselves, and routing only the Rust half leaves the larger
 half where it was.
 
-Measured against a 232-page site, best of three:
+Measured against a 232-page site, best of three. The musl binary here was
+dynamically linked, so these four compare allocators and not linkage:
 
 | | |
 | --- | --- |
 | glibc, system allocator | 821 ms |
 | glibc, mimalloc | 739 ms |
-| musl (static), mimalloc without `override` | 1697 ms |
-| musl (static), mimalloc with `override` | 850 ms |
+| musl, mimalloc without `override` | 1697 ms |
+| musl, mimalloc with `override` | 850 ms |
 
 The musl row is the one worth keeping: it is the usual "musl is slow" report,
-and it is not the libc — it is the C allocations nothing had routed. With them
-routed, a musl build costs 15% for a container that carries no libc worth
-speaking of.
+and it is not the libc — it is the C allocations nothing had routed.
+
+The container is a *static* musl build, which is a different binary again, so it
+was checked on its own: a 240-page site, median of nine runs interleaved between
+the two so that any drift lands on both.
+
+| | |
+| --- | --- |
+| glibc, mimalloc with `override` | 184 ms |
+| musl static, mimalloc with `override` | 207 ms |
+
+So the image costs about 12% of a build and saves every shared object it would
+otherwise have to carry. That the gap is 12% and not the 130% of the unrouted
+row is the standing check that `override` is still winning under a static link;
+if it ever regresses towards that, this is what broke.
 
 ## How it fits together
 
-While the two are developed together, `adocers-html` and `adocers-render-core`
-are path dependencies on a sibling checkout of
-[adocers](https://github.com/AlexanderThaller/adocers); swap the `path` in the
-workspace manifest for a version before publishing.
+The AsciiDoc back end is [adocers](https://github.com/AlexanderThaller/adocers),
+taken from the registry like any other dependency. To work on both at once,
+point cargo at a sibling checkout with a `[patch.crates-io]` entry rather than
+editing the workspace manifest, so that what is committed stays buildable by
+anyone.
 
 ```
 antors            the command line

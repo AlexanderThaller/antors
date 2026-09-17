@@ -18,11 +18,8 @@ antors-content = { version = "0.1", path = "crates/antors-content" }
 antors-model = { version = "0.1", path = "crates/antors-model" }
 antors-site = { version = "0.1", path = "crates/antors-site", default-features = false }
 antors-ui = { version = "0.1", path = "crates/antors-ui" }
-# Path dependencies until the registry mirror carries adocers 0.2, which is
-# published. Dropping the two `path` keys — and this flake's `adocers` input
-# with them — is the whole of the change.
-adocers-html = { version = "0.2", path = "../adocers/crates/adocers-html", default-features = false }
-adocers-render-core = { version = "0.2", path = "../adocers/crates/adocers-render-core", default-features = false }
+adocers-html = { version = "0.2", default-features = false }
+adocers-render-core = { version = "0.2", default-features = false }
 anyhow = "1"
 # Only what reading a repository needs: refs, trees and blobs. No network, no
 # worktree checkout, no index — a build reads history, it does not change it.

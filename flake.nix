@@ -8,17 +8,6 @@
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    # The back end, as a source tree rather than a flake: this repository takes
-    # a *path* dependency on it while the two are developed together, so a build
-    # has to put it back where the manifest expects to find it. Point this
-    # elsewhere to build against a working copy:
-    #
-    #   nix build --override-input adocers path:../adocers
-    adocers = {
-      url = "github:AlexanderThaller/adocers";
-      flake = false;
-    };
   };
 
   outputs =
@@ -26,7 +15,6 @@
       self,
       nixpkgs,
       rust-overlay,
-      adocers,
     }:
     let
       inherit (nixpkgs) lib;
@@ -79,6 +67,15 @@
           rustc = toolchain;
         };
 
+      # What a dynamically linked build should look for at run time, or `null`
+      # where the question does not arise. See `postFixup` in `antorsPackage`.
+      runpathFor =
+        pkgs:
+        lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+          pkgs.stdenv.cc.libc
+          pkgs.stdenv.cc.cc.libgcc
+        ];
+
       cargoToml = lib.importTOML ./Cargo.toml;
 
       # Everything the build reads, and nothing else — a rendered
@@ -96,31 +93,18 @@
         ];
       };
 
-      # The two checkouts, side by side, because that is the layout the path
-      # dependency in `Cargo.toml` describes. Reproducing it here is what lets
-      # the manifest stay as it is for local development.
-      sourceFor =
-        pkgs:
-        pkgs.runCommandLocal "antors-source" { } ''
-          mkdir -p $out/antors
-          cp -R ${ownFiles}/. $out/antors/
-          cp -R ${adocers}/. $out/adocers/
-          chmod -R u+w $out
-        '';
-
       antorsPackage =
         {
           lib,
-          pkgs,
           rustPlatform,
           rustflags ? null,
+          runpath ? null,
         }:
         rustPlatform.buildRustPackage {
           pname = cargoToml.package.name;
           inherit (cargoToml.workspace.package) version;
 
-          src = sourceFor pkgs;
-          sourceRoot = "antors-source/antors";
+          src = ownFiles;
 
           cargoLock.lockFile = ./Cargo.lock;
 
@@ -138,11 +122,25 @@
           # unstripped binary drags a compiler's worth of shared objects it
           # never opens into the image behind it.
           stripAllList = [ "bin" ];
-        }
-        // lib.optionalAttrs (rustflags != null) {
-          env.RUSTFLAGS = rustflags;
-        }
-        // {
+
+          # Folded in here rather than merged onto the result: `//` applies to
+          # what `buildRustPackage` *returned*, which is a derivation whose
+          # build has already been described — an `env` added there is read by
+          # nobody.
+          env = lib.optionalAttrs (rustflags != null) { RUSTFLAGS = rustflags; };
+
+          # `libgcc_s.so.1` is the only file this binary ever opens out of
+          # gcc's `lib` output, and that output is ten megabytes of libstdc++
+          # and sanitizer runtimes it never touches — all of which the linker's
+          # runpath drags into the image behind that one shared object.
+          # nixpkgs also ships `libgcc_s.so.1` on its own, at 200 kB, and glibc
+          # already puts that in the closure, so narrowing the runpath to what
+          # is actually opened costs nothing and sheds the fat output.
+          #
+          # A static build opens nothing and wants no runpath at all.
+          postFixup = lib.optionalString (runpath != null && runpath != [ ]) ''
+            patchelf --set-rpath ${lib.makeLibraryPath runpath} $out/bin/antors
+          '';
 
           meta = {
             inherit (cargoToml.package) description;
@@ -162,18 +160,24 @@
       # nothing in this one to debug.
       #
       # It is the static musl build, so the image is one file: no libc, no
-      # `/bin`, no loader.
+      # loader, nothing to resolve at start-up.
       #
-      # That was worth checking rather than assuming. A build of this shape is
-      # almost entirely allocation, and musl's allocator is slow enough at it
-      # to dominate the run — against a 232-page site, 1697 ms where glibc took
-      # 739 ms. Routing only *Rust's* allocations through mimalloc does not fix
-      # it, because most of them are not Rust's: the tree-sitter grammars are C
-      # and call `malloc` themselves. mimalloc's `override` feature takes the C
-      # half too, and that closes it — 850 ms, against 741 ms for the same
-      # binary on glibc.
+      # Which was worth measuring rather than assuming, because musl's
+      # allocator very nearly made it impossible. A build of this shape is
+      # almost entirely allocation, and musl's is slow enough at it to dominate
+      # the run — 1697 ms against glibc's 739 ms on a 232-page site. Routing
+      # only *Rust's* allocations through mimalloc does not fix that, because
+      # most of them are not Rust's: the tree-sitter grammars are C and call
+      # `malloc` themselves. mimalloc's `override` feature takes the C half
+      # too, and under a static link it does hold — which is the whole reason
+      # this is viable.
       #
-      # So the image costs 15% of build time and saves the whole of libc.
+      # What it costs, measured over nine interleaved runs of a 240-page site:
+      # 207 ms against 184 ms for the same binary on glibc, so about 12%. What
+      # it saves is every shared object in the image — 72.5 MB down to 33 MB.
+      # That the gap is 12% and not 130% is the standing check that `override`
+      # is still winning; if this ever regresses towards 2x, that is what
+      # broke. Swap `antors-static` for `antors` below to take the other side.
       containerFor =
         pkgs:
         let
@@ -224,8 +228,8 @@
     {
       overlays.default = final: _prev: {
         antors = final.callPackage antorsPackage {
-          pkgs = final;
           rustPlatform = rustPlatformFor final;
+          runpath = runpathFor final;
         };
       };
 
@@ -233,8 +237,9 @@
         pkgs:
         {
           antors = pkgs.callPackage antorsPackage {
-            inherit pkgs;
             rustPlatform = rustPlatformFor pkgs;
+
+            runpath = runpathFor pkgs;
           };
 
           default = self.packages.${pkgs.stdenv.hostPlatform.system}.antors;
@@ -242,7 +247,6 @@
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           # The same binary, linked against musl and depending on nothing.
           antors-static = pkgs.callPackage antorsPackage {
-            inherit pkgs;
             rustPlatform = staticRustPlatformFor pkgs;
 
             # nixpkgs builds for musl dynamically by default, against a loader
