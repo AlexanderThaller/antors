@@ -16,6 +16,13 @@ antors-model.workspace = true
 antors-ui.workspace = true
 thiserror.workspace = true
 
+# Build the documentation with everything switched on, so that items behind a
+# feature are in it rather than missing without explanation. Rustdoc labels
+# each with the feature it needs on its own since 1.92, so nothing here has to
+# ask for that.
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
 default = ["highlight", "math", "mermaid"]
 highlight = ["antors-asciidoc/highlight"]

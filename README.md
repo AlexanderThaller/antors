@@ -219,10 +219,8 @@ if it ever regresses towards that, this is what broke.
 ## How it fits together
 
 The AsciiDoc back end is [adocers](https://github.com/AlexanderThaller/adocers),
-taken from the registry like any other dependency. To work on both at once,
-point cargo at a sibling checkout with a `[patch.crates-io]` entry rather than
-editing the workspace manifest, so that what is committed stays buildable by
-anyone.
+taken from the registry like any other dependency. To develop the two together,
+point cargo at a checkout of it with a `[patch.crates-io]` entry.
 
 ```
 antors            the command line
