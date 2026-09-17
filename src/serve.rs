@@ -145,12 +145,38 @@ async fn serve(
     println!("antors: press Ctrl-C to stop");
 
     axum::serve(listener, app)
-        .with_graceful_shutdown(async {
-            let _ = tokio::signal::ctrl_c().await;
-            println!();
-        })
+        .with_graceful_shutdown(interrupted())
         .await
         .context("serving")
+}
+
+/// Resolves once the process is asked to stop.
+///
+/// The first interrupt starts a graceful shutdown: the listener closes and the
+/// requests in flight are allowed to finish. One of those is almost always a
+/// reload request waiting for the sources to change, which holds on for up to
+/// [`MAX_WAIT`] — twenty seconds of nothing, for someone who only wanted their
+/// prompt back. So a second press does not wait for it.
+async fn interrupted() {
+    // Failing to install the handler leaves this pending for ever, which means
+    // the server runs until it is killed: the same as having no handler.
+    if tokio::signal::ctrl_c().await.is_err() {
+        std::future::pending::<()>().await;
+    }
+
+    // The terminal has just echoed `^C`, so open a line before writing on it.
+    println!();
+    println!("antors: stopping; press Ctrl-C again to quit at once");
+
+    // The handler stays installed, so awaiting it again waits for the next
+    // press. Exiting from here rather than letting the shutdown finish is the
+    // whole point: nothing still running is worth waiting for.
+    tokio::spawn(async {
+        if tokio::signal::ctrl_c().await.is_ok() {
+            println!("antors: quitting");
+            std::process::exit(130);
+        }
+    });
 }
 
 /// What every request handler shares.
