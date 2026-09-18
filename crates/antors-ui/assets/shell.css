@@ -21,6 +21,13 @@
   --navbar-muted: #9aa4b1;
   --accent-soft: #e8f0fb;
 
+  /* A searched-for word, marked in the page it was found in.
+     Deliberately stronger than the `#fff3b0` further down that the article's
+     own `<mark>` uses: the two can appear in the same paragraph, and a pale
+     yellow beside a pale yellow says the author highlighted both. */
+  --hit-bg: #ffd24a;
+  --hit-fg: #1c1e21;
+
   --navbar-height: 3.25rem;
   --toolbar-height: 2.75rem;
   --nav-width: 16rem;
@@ -39,6 +46,8 @@
   :root {
     --navbar-bg: #0f1419;
     --accent-soft: #1b2733;
+    --hit-bg: #8a6a00;
+    --hit-fg: #fff6d5;
     --shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   }
 }
@@ -220,6 +229,29 @@ body {
   margin: 0.5rem 0.4rem;
   color: var(--muted);
   font-size: 0.8125rem;
+}
+
+/* A word marked in the page because it is what was searched for.
+ *
+ * Its own class rather than bare `mark`, which `AsciiDoc`'s own `#highlight#`
+ * already renders as — two different things, and a reader who cannot tell them
+ * apart cannot tell what they came here for.
+ *
+ * Written `.doc mark.search-hit` rather than `mark.search-hit` so that it beats
+ * `.doc mark` further down this file on specificity rather than on order. The
+ * two are equal on order, which is a thing that only stays true while nobody
+ * moves either of them.
+ *
+ * `inherit` for everything but the colours, because a hit lands anywhere: in a
+ * heading, in a table cell, inside a listing. Anything else would make the word
+ * it marks a different size or weight from the sentence it is in. */
+.doc mark.search-hit {
+  padding: 0 0.1em;
+  border-radius: 2px;
+  background: var(--hit-bg);
+  color: var(--hit-fg);
+  font: inherit;
+  line-height: inherit;
 }
 
 .navbar-burger {

@@ -238,6 +238,20 @@ the top. Each page also carries its component and version as pagefind filters,
 which is what the chips above the results narrow by — a site of several
 components can search one of them.
 
+Following a result carries the words across in the URL —
+`blocks.html?highlight=admonition` — and the page that opens marks them in its
+text and scrolls to the first one, rather than opening at the top and leaving
+the reader to find what they were promised. When the result was a heading, the
+first mark *after* that heading is the one gone to; the heading is where they
+asked to be. `Escape` takes the marks out again, putting the text back exactly
+as it was.
+
+The marks are made from the words, not from the index, so they are matched from
+the start of a word rather than exactly: the index stems, so `index` is what
+found a page that only ever says `indexing`, and a page that highlights nothing
+after saying it matched reads as broken. The cost is `cat` also marking
+`catalog`.
+
 Nothing about a result is written against the site's address. A page is indexed
 under its path in the output directory, and the script joins that to the path
 from the page being read back to the root, so the search works the same from a

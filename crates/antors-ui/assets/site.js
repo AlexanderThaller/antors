@@ -18,6 +18,15 @@
     Array.prototype.forEach.call((root || doc).querySelectorAll(selector), fn)
   }
 
+  // The URL parameter a search result carries its words in, written by the
+  // search box and read by the page it leads to. One name, used at both ends.
+  var HIGHLIGHT = 'highlight'
+
+  // A query as the words it is made of.
+  function words (query) {
+    return query.split(/\s+/).filter(Boolean)
+  }
+
   // --- the navbar's menu on a narrow screen --------------------------------
 
   var burger = doc.querySelector('.navbar-burger')
@@ -365,15 +374,39 @@
       return row
     }
 
+    // Where a result leads: the page, the heading within it if there is one,
+    // and what was asked for.
+    //
+    // The words are carried across in the URL so the page that opens can mark
+    // them and put the reader on the first one. A link is the only thing that
+    // survives the navigation — the reader may also have opened it in a new tab,
+    // or come back to it from their history a week later — so it is the link
+    // that has to say what the search was.
+    function destination (data, hash, terms) {
+      var query = new URLSearchParams()
+
+      // One parameter per word, which is the shape pagefind's own tooling
+      // writes and reads.
+      terms.forEach(function (term) {
+        query.append(HIGHLIGHT, term)
+      })
+
+      var url = resultRoot + data.raw_url
+
+      if (!terms.length) return url + (hash || '')
+
+      return url + '?' + query.toString() + (hash || '')
+    }
+
     // One result: where it is, what it says, and the headings under it that
     // match — a page of a manual is long, and the section is the answer.
-    function entry (data) {
+    function entry (data, terms) {
       var item = doc.createElement('li')
       item.className = 'search-result'
 
       var link = doc.createElement('a')
       link.className = 'search-title'
-      link.href = resultRoot + data.raw_url
+      link.href = destination(data, null, terms)
       link.textContent = (data.meta && data.meta.title) || data.raw_url
       item.appendChild(link)
 
@@ -414,7 +447,7 @@
           // The hash is pagefind's; the path is ours. Its own `url` is rewritten
           // against a base this page has no way to state, so only the part it
           // worked out — which heading matched — is taken from it.
-          anchor.href = resultRoot + data.raw_url + sub.url.slice(sub.url.indexOf('#'))
+          anchor.href = destination(data, sub.url.slice(sub.url.indexOf('#')), terms)
           anchor.textContent = sub.title
 
           row.appendChild(anchor)
@@ -443,9 +476,10 @@
 
       var list = doc.createElement('ul')
       list.className = 'search-list'
+      var terms = words(term)
 
       results.forEach(function (data) {
-        list.appendChild(entry(data))
+        list.appendChild(entry(data, terms))
       })
 
       searchPanel.appendChild(list)
@@ -495,7 +529,13 @@
     // Down into the results and back out again, so a result can be reached
     // without leaving the keyboard.
     on(searchBox, 'keydown', function (event) {
-      if (event.key === 'Escape') return hide()
+      if (event.key === 'Escape') {
+        // One Escape, one thing: a reader dismissing the panel has not also
+        // asked for the marks in the page behind it to go.
+        if (!searchPanel.hidden) event.stopPropagation()
+
+        return hide()
+      }
 
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
 
@@ -532,6 +572,156 @@
 
     on(doc.documentElement, 'click', function (event) {
       if (!searchBox.contains(event.target)) hide()
+    })
+  }
+
+  // --- what was searched for, marked in the page ------------------------------
+
+  // A result answers "this page says it", and then the page opens at the top and
+  // the reader looks for it themselves. So the words come across in the URL, and
+  // here they are marked in the text and the first one is scrolled to.
+  //
+  // This runs on any page reached with those words on its URL, whether or not
+  // the page has a search box of its own: the reader may have come from a bookmark,
+  // a new tab or their history a week later, and the link is the same link.
+  var asked = new URLSearchParams(window.location.search).getAll(HIGHLIGHT)
+
+  if (asked.length) {
+    // Only what the index would have read. Marking the navigation tree beside
+    // the text would put a highlight on every entry naming the page.
+    var indexed = doc.querySelector('[data-pagefind-body]')
+
+    if (indexed) {
+      var hits = mark(indexed, asked)
+
+      if (hits.length) {
+        // The heading in the URL, when a result led to one, is where the reader
+        // asked to be — so the hit to go to is the first one *after* it rather
+        // than the first on the page.
+        var from = window.location.hash && doc.getElementById(decodeURIComponent(window.location.hash.slice(1)))
+
+        var first = from
+          ? hits.find(function (hit) {
+            return from.compareDocumentPosition(hit) & Node.DOCUMENT_POSITION_FOLLOWING
+          })
+          : hits[0]
+
+        var jump = function () {
+          // `center` rather than the top: a marked word is a point in a
+          // paragraph, and a paragraph read from its last line is worse than
+          // one read from the middle.
+          ;(first || hits[0]).scrollIntoView({ block: 'center' })
+        }
+
+        // A fragment is scrolled to by the browser *after* every deferred
+        // script has run, so jumping now would be scrolled over a moment later
+        // — and it is exactly that scroll this is meant to improve on. With no
+        // fragment there is nothing to wait behind, and waiting for the last
+        // image to arrive would leave the reader at the top of the page until
+        // it did.
+        if (from) {
+          on(window, 'load', jump)
+        } else {
+          jump()
+        }
+      }
+
+      // The marks are the page's only sign of where the reader came from, and
+      // they stay until asked to go — a page read with a yellow wash across it
+      // is a page somebody wants to put down.
+      on(doc, 'keydown', function (event) {
+        if (event.key === 'Escape') unmark()
+      })
+    }
+  }
+
+  // Wrap every occurrence of any of `terms` in `root`, and say where they are.
+  //
+  // Matched from the start of a word rather than exactly: the index stems, so a
+  // search for `index` is what found a page that only ever says `indexing`, and
+  // a page that highlights nothing after saying it matched reads as broken. The
+  // cost is `cat` also marking `catalog`, which is visible and understandable in
+  // a way that a blank page is not.
+  function mark (root, terms) {
+    var wanted = terms
+      .map(function (term) {
+        // A term is whatever somebody typed, so it is cut back to the part a
+        // word boundary can be put in front of.
+        return term.replace(/^[^\w]+|[^\w]+$/g, '')
+      })
+      .filter(Boolean)
+      .map(function (term) {
+        return term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      })
+
+    if (!wanted.length) return []
+
+    var pattern = new RegExp('\\b(?:' + wanted.join('|') + ')[\\w-]*', 'gi')
+
+    var walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (node) {
+        if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT
+
+        // What the index was told to skip, and anything marked already, which
+        // is how a second pass leaves the first one's work alone.
+        var parent = node.parentElement
+
+        if (!parent || parent.closest('[data-pagefind-ignore], mark.search-hit')) {
+          return NodeFilter.FILTER_REJECT
+        }
+
+        return NodeFilter.FILTER_ACCEPT
+      },
+    })
+
+    // Collected before anything is replaced: a walker whose tree is being
+    // rewritten underneath it is a walker that skips.
+    var texts = []
+    while (walker.nextNode()) texts.push(walker.currentNode)
+
+    var hits = []
+
+    texts.forEach(function (node) {
+      var text = node.nodeValue
+      var pieces = doc.createDocumentFragment()
+      var at = 0
+      var match
+
+      pattern.lastIndex = 0
+
+      while ((match = pattern.exec(text)) !== null) {
+        if (match.index > at) {
+          pieces.appendChild(doc.createTextNode(text.slice(at, match.index)))
+        }
+
+        var hit = doc.createElement('mark')
+        hit.className = 'search-hit'
+        hit.textContent = match[0]
+
+        pieces.appendChild(hit)
+        hits.push(hit)
+
+        at = match.index + match[0].length
+      }
+
+      if (!at) return
+
+      if (at < text.length) pieces.appendChild(doc.createTextNode(text.slice(at)))
+
+      node.parentNode.replaceChild(pieces, node)
+    })
+
+    return hits
+  }
+
+  // Put the text back the way it was found, rather than hiding the marks: the
+  // page after this is the page as it would have been reached without a search.
+  function unmark () {
+    each('mark.search-hit', function (hit) {
+      var parent = hit.parentNode
+
+      parent.replaceChild(doc.createTextNode(hit.textContent), hit)
+      parent.normalize()
     })
   }
 })()
