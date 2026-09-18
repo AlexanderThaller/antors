@@ -28,12 +28,18 @@ use crate::{
 };
 
 /// Build the shell's model for one page.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "each one is a different thing the page is written from, and gathering them into a \
+              struct for the length of one call would only move the list"
+)]
 pub(crate) fn model(
     playbook: &Playbook,
     catalog: &Catalog,
     component_version: &ComponentVersion,
     navigation: &Navigation,
     pdfs: &Pdfs,
+    search: bool,
     page: &SourceFile,
     rendered: &Rendered,
 ) -> ui::Page {
@@ -58,7 +64,7 @@ pub(crate) fn model(
         .map_or_else(|| "./".to_string(), |start| relativize(&url, start));
 
     ui::Page {
-        site: site(playbook, catalog, &url),
+        site: site(playbook, catalog, &url, search),
         content: rendered.html.clone(),
         title: rendered.title.clone(),
         details: details(catalog, page, &url, &rendered.details),
@@ -153,7 +159,7 @@ fn details(
 }
 
 /// What the whole site is called, written from this page.
-fn site(playbook: &Playbook, catalog: &Catalog, url: &str) -> ui::Site {
+fn site(playbook: &Playbook, catalog: &Catalog, url: &str, search: bool) -> ui::Site {
     let home = start_page(playbook, catalog);
 
     ui::Site {
@@ -165,6 +171,7 @@ fn site(playbook: &Playbook, catalog: &Catalog, url: &str) -> ui::Site {
         url: playbook.site.url.clone(),
         home_url: home.as_deref().map(|home| relativize(url, home)),
         at_home: home.as_deref() == Some(url),
+        search,
     }
 }
 

@@ -99,6 +99,10 @@ pub(crate) struct BuildArgs {
     #[arg(long)]
     pub(crate) no_tags_page: bool,
 
+    /// Do not write the search index, and leave the search box off the pages.
+    #[arg(long)]
+    pub(crate) no_search: bool,
+
     /// Also write every page, and every component version, as a PDF.
     #[arg(long)]
     pub(crate) pdf: bool,

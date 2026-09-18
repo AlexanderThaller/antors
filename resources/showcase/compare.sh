@@ -29,12 +29,14 @@ article() {
   python3 - "$1" <<'PY'
 import re, sys, pathlib
 src = pathlib.Path(sys.argv[1]).read_text()
-match = re.search(r'<article class="doc[^"]*">\n(.*)\n</article>', src, re.S)
+# Whatever else is on the tag: antors also says there what a search index
+# should read, which is the shell's business and not the body's.
+match = re.search(r'<article class="doc[^"]*"[^>]*>\n(.*)\n</article>', src, re.S)
 if not match:
     sys.exit(0)
 body = match.group(1)
 body = re.sub(r'^<h1 class="page">.*?</h1>\n', '', body, flags=re.S)
-body = re.sub(r'<nav class="pagination">.*?</nav>\n?', '', body, flags=re.S)
+body = re.sub(r'<nav class="pagination"[^>]*>.*?</nav>\n?', '', body, flags=re.S)
 sys.stdout.write(body)
 PY
 }

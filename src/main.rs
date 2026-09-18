@@ -58,6 +58,7 @@ fn run() -> Result<ExitCode> {
                     clean: args.clean,
                     tags_page: !args.no_tags_page,
                     pdf: args.pdf,
+                    search: !args.no_search,
                 },
                 &serve::Config {
                     address: serve.bind,
@@ -85,6 +86,7 @@ fn build(path: &std::path::Path, args: &cli::BuildArgs) -> Result<ExitCode> {
             clean: args.clean,
             tags_page: !args.no_tags_page,
             pdf: args.pdf,
+            search: !args.no_search,
         },
     )
     .run()?;

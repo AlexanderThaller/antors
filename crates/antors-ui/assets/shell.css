@@ -97,6 +97,131 @@ body {
 .navbar-menu, .navbar-end { display: flex; align-items: stretch; }
 .navbar-end .navbar-item { color: var(--navbar-muted); font-size: 0.875rem; }
 
+/* ---------------------------------------------------------------------- */
+/* Search                                                                 */
+/* ---------------------------------------------------------------------- */
+
+.navbar-search { padding-right: 0.5rem; }
+
+.search { position: relative; }
+
+.search-input {
+  width: 13rem;
+  max-width: 100%;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--navbar-fg);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.search-input::placeholder { color: var(--navbar-muted); }
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* The panel hangs off the navbar rather than pushing the page around, and is
+   given a height it cannot exceed: a long answer scrolls inside itself instead
+   of running off the bottom of the window. */
+.search-results {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 40;
+  width: 30rem;
+  max-width: calc(100vw - 2rem);
+  max-height: min(70vh, 34rem);
+  overflow-y: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: var(--shadow);
+  text-align: left;
+
+  /* The box sits in a `.navbar-item`, which holds its own label on one line.
+     The panel below it is prose, and inherits that otherwise: an excerpt on a
+     single line the width of the page it came from. */
+  white-space: normal;
+}
+
+/* Said explicitly, because the rule above would otherwise beat the browser's
+   own `[hidden]`. */
+.search-results[hidden] { display: none; }
+
+.search-filters { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.search-filters:empty { display: none; }
+
+.search-filter {
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.search-filter:hover { border-color: var(--accent); }
+
+.search-filter.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.search-list { margin: 0.4rem 0 0; padding: 0; list-style: none; }
+
+.search-result { padding: 0.5rem 0.4rem; border-top: 1px solid var(--rule); }
+.search-result:first-child { border-top: 0; }
+
+.search-title { font-weight: 600; }
+
+.search-where {
+  margin-left: 0.5rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.search-excerpt {
+  margin: 0.2rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.search-excerpt mark {
+  padding: 0 0.1em;
+  border-radius: 2px;
+  background: var(--accent-soft);
+  color: inherit;
+  font-weight: 600;
+}
+
+.search-headings {
+  margin: 0.3rem 0 0;
+  padding: 0 0 0 0.75rem;
+  border-left: 1px solid var(--rule);
+  list-style: none;
+  font-size: 0.8125rem;
+}
+
+.search-headings li { margin-top: 0.15rem; }
+
+.search-empty {
+  margin: 0.5rem 0.4rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
 .navbar-burger {
   display: none;
   flex-direction: column;
@@ -591,6 +716,12 @@ body.-toc .toc.sidebar { display: none; }
   .navbar-menu.is-active { display: flex; }
   .navbar-end { flex-direction: column; align-items: stretch; }
   .nav-toggle { display: block; }
+
+  /* In the dropdown the search box is a row like the others, and its results
+     are as wide as the menu they hang under. */
+  .navbar-search { padding: 0.35rem 0; }
+  .search-input { width: 100%; }
+  .search-results { right: auto; left: 0; width: 100%; }
 
   .nav-container {
     position: fixed;

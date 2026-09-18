@@ -57,6 +57,11 @@ pub type RenderOptions = antors_asciidoc::Options;
 
 /// What to leave out of a build.
 #[derive(Clone, Copy, Debug, Default)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "one field per thing a build can be told to leave out is what reads clearly, the \
+              same way the command line's own arguments do"
+)]
 pub struct Options {
     /// What the renderer should do with the parts of a page it can leave out.
     pub render: antors_asciidoc::Options,
@@ -78,6 +83,13 @@ pub struct Options {
     /// more than everything else a build does put together. A site that wants
     /// the export buttons asks for them.
     pub pdf: bool,
+
+    /// Whether the site gets a search index, and a search box to use it.
+    ///
+    /// The command line asks for this unless told not to, unlike the PDFs: it
+    /// costs a fraction of what rendering the pages did, and a documentation
+    /// site without a search box is one people read by scrolling.
+    pub search: bool,
 }
 
 /// Why a build could not run.
@@ -224,9 +236,23 @@ impl Build {
 
         let pdfs = self.write_pdfs(&catalog, &navigation, &mut writer, &mut report)?;
 
-        self.write_pages(&catalog, &navigation, &pdfs, &mut writer, &mut report)?;
+        // The index is filled from the pages as they are written, so it is
+        // opened before them and written out after.
+        let mut search = self.open_index(&mut report);
+
+        self.write_pages(
+            &catalog,
+            &navigation,
+            &pdfs,
+            search.as_mut(),
+            &mut writer,
+            &mut report,
+        )?;
+
         self.write_redirects(&catalog, &mut writer, &mut report)?;
         self.write_site_files(&catalog, &mut writer, &mut report)?;
+
+        Self::write_index(search, &mut writer, &mut report)?;
 
         Self::report_stale(&writer, &mut report);
 
@@ -381,12 +407,66 @@ impl Build {
         }
     }
 
+    /// Open the search index this build will fill, if it is making one.
+    ///
+    /// `None` covers all three ways there is nothing to fill: the build was
+    /// told not to, this binary was built without the feature, or the index
+    /// could not be opened at all. The last is reported; the pages are still
+    /// worth writing without a search box.
+    fn open_index(&self, report: &mut Report) -> Option<crate::search::Index> {
+        if !self.options.search {
+            return None;
+        }
+
+        #[cfg(feature = "search")]
+        {
+            match crate::search::Index::new() {
+                Ok(index) => Some(index),
+
+                Err(error) => {
+                    report.error(
+                        PLAYBOOK,
+                        format!("the search index could not be started: {error}"),
+                    );
+
+                    None
+                }
+            }
+        }
+
+        #[cfg(not(feature = "search"))]
+        {
+            report.warn(
+                PLAYBOOK,
+                None,
+                "a search index was asked for, and this build of antors was compiled without the \
+                 `search` feature"
+                    .to_string(),
+            );
+
+            None
+        }
+    }
+
+    /// Write the search index, once every page is in it.
+    fn write_index(
+        index: Option<crate::search::Index>,
+        writer: &mut Writer,
+        report: &mut Report,
+    ) -> Result<(), BuildError> {
+        match index {
+            Some(index) => index.write(writer, report),
+            None => Ok(()),
+        }
+    }
+
     /// Render and write every page.
     fn write_pages(
         &self,
         catalog: &Arc<Catalog>,
         navigation: &BTreeMap<(String, String), Navigation>,
         pdfs: &crate::pdf::Pdfs,
+        mut search: Option<&mut crate::search::Index>,
         writer: &mut Writer,
         report: &mut Report,
     ) -> Result<(), BuildError> {
@@ -419,17 +499,36 @@ impl Build {
             let key = (page.key.component.clone(), page.key.version.clone());
             let navigation = navigation.get(&key).unwrap_or(&empty);
 
+            // The box is drawn for the index this build is filling, not for the
+            // one it was asked for: a build that could not open an index writes
+            // pages without a search box rather than pages with a broken one.
             let model = page::model(
                 &self.playbook,
                 catalog,
                 component_version,
                 navigation,
                 pdfs,
+                search.is_some(),
                 page,
                 &article,
             );
 
-            writer.page(&location.out, &antors_ui::render(&model))?;
+            let html = antors_ui::render(&model);
+
+            // Indexed as it was written, so that what a reader searches is what
+            // they would have read — and reported rather than fatal, because a
+            // page missing from the index is a page, not a hole.
+            if let Some(search) = search.as_deref_mut()
+                && let Err(error) = search.add(&location.out, &html)
+            {
+                report.warn(
+                    &page.relative_src_path,
+                    None,
+                    format!("this page is not in the search index: {error}"),
+                );
+            }
+
+            writer.page(&location.out, &html)?;
         }
 
         Ok(())
@@ -614,6 +713,27 @@ impl Build {
     /// each is named, once, against the playbook.
     fn report_what_is_not_run(&self, report: &mut Report) {
         for name in self.playbook.antora.extension_names() {
+            // The search extension is the one whose job this build does itself,
+            // so saying only that it is not run would be true and useless: the
+            // site has search, it is simply not lunr's.
+            if name.contains("lunr") {
+                report.warn(
+                    PLAYBOOK,
+                    None,
+                    format!(
+                        "`{name}` is an Antora extension, and is not run; {}",
+                        if self.options.search {
+                            "this build writes a pagefind index of its own, and the page shell \
+                             searches it"
+                        } else {
+                            "search is built in, and this build was told not to write an index"
+                        },
+                    ),
+                );
+
+                continue;
+            }
+
             report.warn(
                 PLAYBOOK,
                 None,

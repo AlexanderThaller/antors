@@ -254,4 +254,284 @@
       content.appendChild(button)
     })
   }
+
+  // --- search -----------------------------------------------------------------
+
+  // The index is pagefind's: a directory of chunks beside a wasm module, both
+  // fetched only once somebody means to search. A reader who never uses the box
+  // downloads none of it, which is the whole reason the index is not a script
+  // in the page.
+  var searchBox = doc.querySelector('.search')
+
+  if (searchBox) {
+    var searchInput = searchBox.querySelector('.search-input')
+    var searchPanel = searchBox.querySelector('.search-results')
+
+    // Where the index is, and what a result's URL is relative to. The shell
+    // writes both relative to this page, and the first is resolved against it
+    // here rather than used as it stands: a dynamic import inside a classic
+    // script resolves against the *script*, which lives somewhere else.
+    var indexPath = new URL(searchBox.getAttribute('data-search-index'), doc.baseURI).href
+    var resultRoot = searchBox.getAttribute('data-search-root') || ''
+
+    var RESULTS = 8 // pages shown at once
+    var HEADINGS = 3 // headings shown under one page
+
+    var loading = null // the import, and then the module it brought
+    var filtersLoaded = null // the filters the index offers, once they are asked for
+    var components = [] // the components there are to filter by
+    var only = null // the one being filtered to, or null for all of them
+    var serial = 0 // which query the panel is answering
+
+    // Loaded once, on the first sign that somebody is going to search.
+    function load () {
+      if (loading) return loading
+
+      loading = import(indexPath + 'pagefind.js').then(function (module) {
+        return Promise.resolve(module.options({ basePath: indexPath })).then(function () {
+          return module
+        })
+      })
+
+      return loading
+    }
+
+    // What there is to filter by, asked of the index rather than written into
+    // the page: a site with one component has nothing to choose between, and
+    // gets no chooser.
+    //
+    // Asked for once and remembered, and waited on before the first results are
+    // drawn, so that the chips are there with them rather than appearing
+    // underneath a moment later.
+    function loadFilters () {
+      if (filtersLoaded) return filtersLoaded
+
+      filtersLoaded = load()
+        .then(function (module) {
+          return module.filters()
+        })
+        .then(function (available) {
+          var byComponent = available && available.component
+          var names = byComponent ? Object.keys(byComponent) : []
+
+          if (names.length > 1) components = names.sort()
+        })
+
+      return filtersLoaded
+    }
+
+    function hide () {
+      serial++
+      searchPanel.hidden = true
+      searchPanel.textContent = ''
+    }
+
+    function say (message) {
+      searchPanel.textContent = ''
+      searchPanel.appendChild(filters())
+
+      var line = doc.createElement('p')
+      line.className = 'search-empty'
+      line.textContent = message
+
+      searchPanel.appendChild(line)
+      searchPanel.hidden = false
+    }
+
+    // The component chips, rebuilt with each panel so that which one is active
+    // is never a second copy of the answer.
+    function filters () {
+      var row = doc.createElement('div')
+      row.className = 'search-filters'
+
+      if (!components.length) return row
+
+      ;[null].concat(components).forEach(function (name) {
+        var chip = doc.createElement('button')
+        chip.type = 'button'
+        chip.className = 'search-filter'
+        chip.textContent = name === null ? 'Everything' : name
+
+        if (only === name) chip.classList.add('is-active')
+
+        on(chip, 'click', function () {
+          only = name
+          run(searchInput.value.trim())
+        })
+
+        row.appendChild(chip)
+      })
+
+      return row
+    }
+
+    // One result: where it is, what it says, and the headings under it that
+    // match — a page of a manual is long, and the section is the answer.
+    function entry (data) {
+      var item = doc.createElement('li')
+      item.className = 'search-result'
+
+      var link = doc.createElement('a')
+      link.className = 'search-title'
+      link.href = resultRoot + data.raw_url
+      link.textContent = (data.meta && data.meta.title) || data.raw_url
+      item.appendChild(link)
+
+      var where = [data.meta && data.meta.component, data.meta && data.meta.version]
+        .filter(Boolean)
+        .join(' · ')
+
+      if (where) {
+        var badge = doc.createElement('span')
+        badge.className = 'search-where'
+        badge.textContent = where
+        item.appendChild(badge)
+      }
+
+      var excerpt = doc.createElement('p')
+      excerpt.className = 'search-excerpt'
+      // The only markup in an excerpt is pagefind's own `<mark>`: the text it
+      // is built from was escaped before the match was marked in it.
+      excerpt.innerHTML = data.excerpt
+      item.appendChild(excerpt)
+
+      // A sub-result without an anchor *is* the page, which is already the link
+      // above it.
+      var headings = (data.sub_results || [])
+        .filter(function (sub) {
+          return sub.url.indexOf('#') !== -1
+        })
+        .slice(0, HEADINGS)
+
+      if (headings.length) {
+        var list = doc.createElement('ul')
+        list.className = 'search-headings'
+
+        headings.forEach(function (sub) {
+          var row = doc.createElement('li')
+          var anchor = doc.createElement('a')
+
+          // The hash is pagefind's; the path is ours. Its own `url` is rewritten
+          // against a base this page has no way to state, so only the part it
+          // worked out — which heading matched — is taken from it.
+          anchor.href = resultRoot + data.raw_url + sub.url.slice(sub.url.indexOf('#'))
+          anchor.textContent = sub.title
+
+          row.appendChild(anchor)
+          list.appendChild(row)
+        })
+
+        item.appendChild(list)
+      }
+
+      return item
+    }
+
+    function render (results, term) {
+      searchPanel.textContent = ''
+      searchPanel.appendChild(filters())
+
+      if (!results.length) {
+        var none = doc.createElement('p')
+        none.className = 'search-empty'
+        none.textContent = 'Nothing matches ' + term + '.'
+        searchPanel.appendChild(none)
+        searchPanel.hidden = false
+
+        return
+      }
+
+      var list = doc.createElement('ul')
+      list.className = 'search-list'
+
+      results.forEach(function (data) {
+        list.appendChild(entry(data))
+      })
+
+      searchPanel.appendChild(list)
+      searchPanel.hidden = false
+    }
+
+    function run (term) {
+      if (!term) return hide()
+
+      var mine = ++serial
+
+      Promise.all([load(), loadFilters()])
+        .then(function (loaded) {
+          var module = loaded[0]
+          var options = only ? { filters: { component: [only] } } : {}
+
+          return module.debouncedSearch(term, options, 140)
+        })
+        .then(function (search) {
+          // Null means somebody typed again while this one was waiting.
+          if (!search || mine !== serial) return
+
+          return Promise.all(
+            search.results.slice(0, RESULTS).map(function (result) {
+              return result.data()
+            })
+          ).then(function (results) {
+            if (mine === serial) render(results, term)
+          })
+        })
+        .catch(function () {
+          if (mine === serial) say('The search index could not be loaded.')
+        })
+    }
+
+    // Fetched on the way to the box rather than after the first keystroke, so
+    // that the wasm is usually already here by the time there is a word to
+    // search for.
+    on(searchInput, 'focus', function () {
+      loadFilters().catch(function () {})
+    })
+
+    on(searchInput, 'input', function () {
+      run(searchInput.value.trim())
+    })
+
+    // Down into the results and back out again, so a result can be reached
+    // without leaving the keyboard.
+    on(searchBox, 'keydown', function (event) {
+      if (event.key === 'Escape') return hide()
+
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+
+      var links = Array.prototype.slice.call(searchPanel.querySelectorAll('a'))
+      if (!links.length) return
+
+      event.preventDefault()
+
+      var at = links.indexOf(doc.activeElement)
+      var step = event.key === 'ArrowDown' ? 1 : -1
+      var next = at === -1 ? (step === 1 ? 0 : links.length - 1) : at + step
+
+      if (next < 0) return searchInput.focus()
+      if (next >= links.length) return
+
+      links[next].focus()
+    })
+
+    // `/` is where a reader's hand goes on a documentation site, but not while
+    // they are already typing somewhere.
+    on(doc, 'keydown', function (event) {
+      if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return
+
+      var focused = doc.activeElement
+      var tag = focused ? focused.tagName : ''
+
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (focused && focused.isContentEditable) return
+
+      event.preventDefault()
+      searchInput.focus()
+      searchInput.select()
+    })
+
+    on(doc.documentElement, 'click', function (event) {
+      if (!searchBox.contains(event.target)) hide()
+    })
+  }
 })()

@@ -39,6 +39,7 @@ fn build(name: &str) -> (PathBuf, Report) {
             clean: true,
             tags_page: true,
             pdf: false,
+            search: true,
         },
     )
     .run()
@@ -425,6 +426,156 @@ fn a_mermaid_block_is_drawn_while_the_site_is_built() {
     }
 }
 
+/// The search index, and the box that reads it.
+///
+/// What is checked here is the seam between the two: the shell writes a path
+/// into every page saying where the index is, and the build writes the index
+/// there. Whether pagefind's own index is any good is pagefind's business; that
+/// the two halves agree, and that a result can be followed from any depth, is
+/// this build's.
+#[cfg(feature = "search")]
+mod search {
+    use super::{
+        build,
+        page,
+        tree,
+    };
+
+    #[test]
+    fn the_index_is_written_where_the_search_box_looks_for_it() {
+        let (out, _) = build("search");
+        let files = tree(&out);
+
+        // The module the shell imports, what tells it which languages there
+        // are, and the wasm that does the searching.
+        for expected in [
+            "_/pagefind/pagefind.js",
+            "_/pagefind/pagefind-entry.json",
+            "_/pagefind/wasm.en.pagefind",
+        ] {
+            assert!(files.contains(expected), "`{expected}` is missing");
+        }
+
+        // And the index itself, whose file names are content hashes.
+        for family in [
+            "_/pagefind/index/",
+            "_/pagefind/fragment/",
+            "_/pagefind/filter/",
+        ] {
+            assert!(
+                files.iter().any(|file| file.starts_with(family)),
+                "nothing was written under `{family}`"
+            );
+        }
+
+        // Pagefind's three ready-made interfaces are not used by the shell, and
+        // are not published.
+        assert!(
+            !files.iter().any(|file| file.contains("pagefind-ui")),
+            "an unused interface bundle reached the site"
+        );
+    }
+
+    #[test]
+    fn every_page_says_where_the_index_is_from_where_it_is() {
+        let (out, _) = build("search-paths");
+
+        // Two deep, three deep, and one deep — each pointing at the same
+        // directory from where it stands. A site that got this wrong would only
+        // fail at the depths nobody opened.
+        for (path, index, root) in [
+            ("showcase/2.0/index.html", "../../_/pagefind/", "../../"),
+            (
+                "showcase/2.0/guide/getting-started.html",
+                "../../../_/pagefind/",
+                "../../../",
+            ),
+            ("sidecar/index.html", "../_/pagefind/", "../"),
+        ] {
+            let html = page(&out, path);
+
+            assert!(
+                html.contains(&format!(r#"data-search-index="{index}""#)),
+                "`{path}` looks for the index at the wrong depth"
+            );
+
+            assert!(
+                html.contains(&format!(r#"data-search-root="{root}""#)),
+                "`{path}` would resolve a result against the wrong place"
+            );
+        }
+    }
+
+    #[test]
+    fn a_page_says_what_of_it_is_worth_indexing() {
+        let (out, _) = build("search-markup");
+        let html = page(&out, "showcase/2.0/index.html");
+
+        // The article is the document; the navigation, navbar and footer around
+        // it are not, and an index that took them would match every page in the
+        // site on every word in the menu.
+        assert!(
+            html.contains("<article class=\"doc\" data-pagefind-body"),
+            "{html}"
+        );
+
+        // The component version a result belongs to, for the filters and for
+        // what is shown beside a result's title. Read from attributes of their
+        // own rather than written into the list, which takes only one literal.
+        assert!(html.contains(r#"data-component="Showcase""#));
+        assert!(html.contains(r#"data-version="2.0 (current)""#));
+        assert!(html.contains(
+            r#"data-pagefind-filter="component[data-component], version[data-version]""#
+        ));
+
+        // The links to the pages either side are navigation, not content.
+        assert!(html.contains(r#"<nav class="pagination" data-pagefind-ignore>"#));
+    }
+
+    #[test]
+    fn a_build_that_was_not_asked_for_an_index_writes_none() {
+        use std::path::Path;
+
+        use antors_model::Playbook;
+        use antors_site::{
+            Build,
+            Options,
+        };
+
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let mut playbook = Playbook::load(&root.join("resources/showcase/antora-playbook.yml"))
+            .expect("the showcase playbook loads");
+
+        let out = root.join("target/tests/search-off");
+        playbook.output.dir.clone_from(&out);
+
+        Build::new(
+            playbook,
+            Options {
+                render: antors_site::build::RenderOptions::default(),
+                clean: true,
+                tags_page: true,
+                pdf: false,
+                search: false,
+            },
+        )
+        .run()
+        .expect("the showcase builds");
+
+        assert!(!out.join("_/pagefind").exists());
+
+        // And no box, because a box with nothing behind it looks broken rather
+        // than absent.
+        let html = page(&out, "showcase/2.0/index.html");
+        assert!(!html.contains("search-input"), "{html}");
+
+        // What the page says about itself is written either way: it describes
+        // the page, not the search, and is what lets `pagefind` be run over the
+        // output by hand.
+        assert!(html.contains("data-pagefind-body"));
+    }
+}
+
 #[test]
 fn a_tagged_component_version_gets_a_tags_page() {
     let (out, _) = build("tags");
@@ -472,6 +623,7 @@ fn the_tags_page_can_be_switched_off() {
             clean: true,
             tags_page: false,
             pdf: false,
+            search: false,
         },
     )
     .run()
@@ -514,6 +666,7 @@ fn a_page_left_over_from_an_earlier_build_is_reported() {
             clean: false,
             tags_page: true,
             pdf: false,
+            search: false,
         },
     )
     .run()
@@ -621,6 +774,7 @@ mod pdf {
                 clean: true,
                 tags_page: true,
                 pdf: true,
+                search: false,
             },
         )
         .run()

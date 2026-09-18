@@ -34,6 +34,7 @@ here re-implements AsciiDoc; what it adds is Antora's model on top of it.
 | Metadata | a document's author, revision, status and tags are shown under its title — see [Beyond Antora](#beyond-antora) |
 | Tags | `:page-tags:` gathers into a generated `tags.adoc` per component version |
 | PDF | `--pdf` writes every page, and every component version, as a PDF, and puts an export button on each page — see [PDF export](#pdf-export) |
+| Search | every page is indexed as it is written, and the navbar gets a box that searches it in the browser — see [Search](#search) |
 | Serving | `antors serve` rebuilds and reloads the open page as sources change |
 
 ### What does not, yet
@@ -51,7 +52,10 @@ have to be diffed against Antora's to find out.
   stylesheet written for Antora mostly applies, but a bundle's Handlebars
   templates are not run.
 - **`ui.supplemental_files`.** Parsed, not yet applied.
-- **The search index.** No `lunr` index is written.
+- **A `lunr` index.** The site has search, but it is not Antora's: what is
+  written is a [pagefind](https://pagefind.app) index, read by the built-in
+  shell. A playbook that configures `@antora/lunr-extension` is told so. See
+  [Search](#search).
 - **Extensions.** `antora.extensions` and `asciidoc.extensions` are parsed and
   named in the report; they are Node modules and are not run. A site that
   generates pages from an extension will be missing those pages.
@@ -91,6 +95,7 @@ antors --strict                   # fail the build on a warning
 | `--no-math` | Show equations as the notation they were written in. |
 | `--no-icons` | Mark admonitions with their label instead of an icon. |
 | `--no-tags-page` | Do not generate the page that gathers every `:page-tags:` entry. |
+| `--no-search` | Do not write the search index, and leave the search box off the pages. |
 | `--pdf` | Also write every page, and every component version, as a PDF. |
 
 ### serve
@@ -207,6 +212,56 @@ The `pdf` feature is on by default and brings Typst with it. `--no-default-featu
 leaves it out, and a build that is asked for PDFs without it says so.
 
 [`adocers-typst`]: https://crates.io/crates/adocers-typst
+
+### Search
+
+Every page is indexed as it is written, and the navbar gets a box that searches
+the result. `/` puts the cursor in it.
+
+The index is [pagefind]'s, and so is the wasm module that reads it in the
+browser. Both are inside the `pagefind` crate rather than fetched, so a site
+with working search is still something a build makes on its own, offline, with
+no Node and no second toolchain. The showcase's whole index is 240 KB, and the
+browser downloads the chunks a query actually reaches rather than the lot.
+
+What is indexed is the finished page, not the `AsciiDoc`: by then an `include::`
+has been resolved, an attribute substituted and a `xref:` given the text of the
+page it points at, so a reader searching for what they read finds it. The
+article carries `data-pagefind-body`, so the navigation tree and the navbar
+beside it are not indexed — and the links to the previous and next pages are
+marked `data-pagefind-ignore`, because a page is not an answer on account of its
+neighbour's title.
+
+A result says which component version it came from, and lists the headings
+within the page that matched, so a long page lands on the section rather than at
+the top. Each page also carries its component and version as pagefind filters,
+which is what the chips above the results narrow by — a site of several
+components can search one of them.
+
+Nothing about a result is written against the site's address. A page is indexed
+under its path in the output directory, and the script joins that to the path
+from the page being read back to the root, so the search works the same from a
+subdirectory, a branch preview, or a directory on a disk.
+
+The whole of it is an enhancement: with scripting off there is a box that does
+nothing, outside any `<form>`, and every other way through the site still works.
+
+It is on by default, unlike the PDFs, because it is cheap: indexing a page costs
+about 1.3 ms against the 3 ms spent rendering it, so the showcase builds in 91 ms
+with an index and 64 ms without. The cost that is not cheap is the binary, which
+carries pagefind and a wasm module per language: about 12 MB of the release
+build's 97 MB.
+
+`--no-search` leaves the index out of one build, and the box with it. The
+`search` feature leaves the whole of it out of the binary;
+`--no-default-features` does that, and a build that is then asked for an index
+says so.
+
+The attributes the index is built from are written into every page either way,
+so running `pagefind` over the output by hand finds the same body, title and
+filters that the built-in index would have.
+
+[pagefind]: https://pagefind.app
 
 ### The tags page
 

@@ -152,6 +152,8 @@ fn navbar(page: &Page) -> String {
         "</div>\n<div id=\"topbar-nav\" class=\"navbar-menu\">\n<div class=\"navbar-end\">\n",
     );
 
+    out.push_str(&search(page));
+
     // The explore panel lives in the sidebar on a wide screen, where the
     // sidebar is always visible; this is the way to it when the sidebar is not.
     out.push_str(
@@ -160,6 +162,45 @@ fn navbar(page: &Page) -> String {
     );
 
     out.push_str("</div>\n</div>\n</nav>\n</header>\n");
+
+    out
+}
+
+/// The search box, for a build that wrote an index.
+///
+/// Nothing here searches. The markup is the box, the place the results go, and
+/// the two paths the script cannot work out for itself: where the index is, and
+/// what a result's URL is relative to. Both are written per page for the same
+/// reason every other link on it is — the site does not have to know its own
+/// address, so a page still works read out of a subdirectory, a branch preview,
+/// or a directory on disk.
+///
+/// The box is a plain `<input>` outside any `<form>`, so a reader who types and
+/// presses Enter before the script has loaded reloads nothing.
+fn search(page: &Page) -> String {
+    if !page.site.search {
+        return String::new();
+    }
+
+    let mut out = String::from("<div class=\"navbar-item navbar-search\">\n");
+
+    let _ = writeln!(
+        out,
+        "<div class=\"search\" role=\"search\" data-search-index=\"{}pagefind/\" \
+         data-search-root=\"{}\">",
+        attr(&ui_path(&page.root_path)),
+        attr(&site_root(&page.root_path)),
+    );
+
+    out.push_str(
+        "<input class=\"search-input\" type=\"search\" placeholder=\"Search\" aria-label=\"Search \
+         this site\" autocomplete=\"off\" spellcheck=\"false\">\n",
+    );
+
+    // Empty, and hidden, until there is something to put in it.
+    out.push_str("<div class=\"search-results\" hidden></div>\n");
+
+    out.push_str("</div>\n</div>\n");
 
     out
 }
@@ -181,11 +222,21 @@ fn footer(page: &Page) -> String {
 
 /// Where the UI's own files sit, relative to a page at `root_path`.
 fn ui_path(root_path: &str) -> String {
+    format!("{}_/", site_root(root_path))
+}
+
+/// The path from a page at `root_path` to the site root, ready to have
+/// something joined onto it.
+///
+/// `root_path` is written without a trailing slash, and is empty for a page at
+/// the root itself. Both are joined onto by the search script, one result URL
+/// at a time, so the slash is settled here rather than in JavaScript.
+fn site_root(root_path: &str) -> String {
     if root_path.is_empty() {
-        return "_/".to_string();
+        return String::new();
     }
 
-    format!("{root_path}/_/")
+    format!("{root_path}/")
 }
 
 /// The page served when nothing else matches.
@@ -262,6 +313,52 @@ mod tests {
     fn the_ui_path_is_relative_to_the_page() {
         assert_eq!(ui_path(""), "_/");
         assert_eq!(ui_path("../.."), "../../_/");
+    }
+
+    #[test]
+    fn a_result_url_is_joined_onto_the_path_to_the_root() {
+        // The script does no more than put these together, so the slash has to
+        // already be here — and not twice over on a page at the root.
+        assert_eq!(
+            format!("{}{}", site_root("../.."), "showcase/2.0/index.html"),
+            "../../showcase/2.0/index.html",
+        );
+
+        assert_eq!(
+            format!("{}{}", site_root(""), "showcase/2.0/index.html"),
+            "showcase/2.0/index.html",
+        );
+    }
+
+    #[test]
+    fn a_site_with_no_index_gets_no_search_box() {
+        let page = Page::default();
+
+        assert!(!page.site.search, "a page is drawn without one by default");
+        assert_eq!(search(&page), "");
+    }
+
+    #[test]
+    fn a_search_box_says_where_the_index_is() {
+        let page = Page {
+            root_path: "../..".to_string(),
+            site: crate::model::Site {
+                search: true,
+                ..crate::model::Site::default()
+            },
+            ..Page::default()
+        };
+
+        let html = search(&page);
+
+        assert!(
+            html.contains(r#"data-search-index="../../_/pagefind/""#),
+            "{html}"
+        );
+        assert!(html.contains(r#"data-search-root="../../""#), "{html}");
+
+        // Outside a form: Enter before the script has loaded must do nothing.
+        assert!(!html.contains("<form"));
     }
 
     #[test]

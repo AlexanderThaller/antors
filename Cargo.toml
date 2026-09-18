@@ -82,7 +82,7 @@ categories = ["command-line-utilities", "text-processing"]
 all-features = true
 
 [features]
-default = ["serve", "highlight", "math", "mermaid", "pdf"]
+default = ["serve", "highlight", "math", "mermaid", "pdf", "search"]
 
 # `antors serve`: a local server that rebuilds and reloads as the sources
 # change. Without it the binary only builds.
@@ -95,6 +95,11 @@ mermaid = ["antors-site/mermaid"]
 # `antors build --pdf`: every page, and every component version, also written
 # as a PDF.
 pdf = ["antors-site/pdf"]
+
+# The site's search: a pagefind index written beside the pages, and the box in
+# the navbar that reads it. Without it `--no-search` is the only behaviour, and
+# a playbook that asks for search is told so.
+search = ["antors-site/search"]
 
 [dependencies]
 antors-site.workspace = true

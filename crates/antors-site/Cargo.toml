@@ -16,6 +16,29 @@ antors-model.workspace = true
 antors-ui.workspace = true
 thiserror.workspace = true
 
+# The search index, behind the `search` feature. Taken with its defaults off:
+# the default is pagefind's own `--serve`, which is a second web server this
+# project has no use for — `antors serve` is already one.
+#
+# What the crate brings with it is the point of taking it: the index format,
+# the script that reads it and a wasm module per language are all inside it, so
+# a searchable site is still something a build makes on its own, with nothing
+# fetched and no second toolchain.
+pagefind = { version = "1.5", default-features = false, optional = true }
+
+# Pagefind's API is async, and a build is not. `rt` is here to run it, and
+# nothing of this crate's own is async.
+#
+# `io-util` is here for pagefind rather than for this crate: it writes files
+# through `AsyncWriteExt` without asking tokio for the feature that defines it,
+# and gets away with it because its own default feature — the `--serve` command,
+# which is off here — pulls in a web server that does ask. Taken out of that
+# path, the feature has to come from somewhere, and this is the only somewhere.
+tokio = { version = "1", default-features = false, features = [
+  "rt",
+  "io-util",
+], optional = true }
+
 # Build the documentation with everything switched on, so that items behind a
 # feature are in it rather than missing without explanation. Rustdoc labels
 # each with the feature it needs on its own since 1.92, so nothing here has to
@@ -24,11 +47,12 @@ thiserror.workspace = true
 all-features = true
 
 [features]
-default = ["highlight", "math", "mermaid", "pdf"]
+default = ["highlight", "math", "mermaid", "pdf", "search"]
 highlight = ["antors-asciidoc/highlight"]
 math = ["antors-asciidoc/math"]
 mermaid = ["antors-asciidoc/mermaid"]
 pdf = ["antors-asciidoc/pdf"]
+search = ["dep:pagefind", "dep:tokio"]
 
 [lints]
 workspace = true

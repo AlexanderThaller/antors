@@ -227,7 +227,11 @@ pub(crate) fn article(page: &Page) -> String {
         classes.push_str(role);
     }
 
-    let mut out = format!("<article class=\"{}\">\n", attr(&classes));
+    let mut out = format!(
+        "<article class=\"{}\"{}>\n",
+        attr(&classes),
+        indexable(page),
+    );
 
     if let Some(title) = &page.title {
         let _ = writeln!(out, "<h1 class=\"page\">{title}</h1>");
@@ -244,6 +248,31 @@ pub(crate) fn article(page: &Page) -> String {
     out.push_str("</article>\n");
 
     out
+}
+
+/// What tells an indexer that this element is the page, and which component
+/// version it belongs to.
+///
+/// Written whether or not this build wrote an index, because the attributes
+/// describe the page rather than the search: run `pagefind` over a site built
+/// without the `search` feature and it finds the same body, the same title and
+/// the same filters as the built-in index would have.
+///
+/// The values go in attributes of their own, and are *named* from
+/// `data-pagefind-meta`, rather than written into it as `component:Antors`.
+/// That form takes everything after its first colon as one literal value, so a
+/// component whose title has a comma in it — or a version like `2.0: beta` —
+/// would silently become part of the value beside it. Reading each from its own
+/// attribute has no such seam, and leaves the escaping to the same function
+/// that escapes every other attribute here.
+fn indexable(page: &Page) -> String {
+    format!(
+        " data-pagefind-body data-component=\"{}\" data-version=\"{}\" \
+         data-pagefind-meta=\"component[data-component], version[data-version]\" \
+         data-pagefind-filter=\"component[data-component], version[data-version]\"",
+        attr(&page.component.title),
+        attr(&page.component.display_version),
+    )
 }
 
 /// What the document says about itself, shown between the title and the text.
@@ -306,7 +335,10 @@ fn pagination(page: &Page) -> String {
         return String::new();
     }
 
-    let mut out = String::from("<nav class=\"pagination\">\n");
+    // Left out of the index: the titles either side of this page are the two
+    // pages nearest it in the navigation, and a search that answers with a page
+    // because its *neighbour* is called that is a search nobody trusts twice.
+    let mut out = String::from("<nav class=\"pagination\" data-pagefind-ignore>\n");
 
     if let Some(previous) = &page.previous {
         let _ = writeln!(

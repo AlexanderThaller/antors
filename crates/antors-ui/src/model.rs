@@ -97,6 +97,14 @@ pub struct Site {
 
     /// Whether the page being drawn *is* the home page.
     pub at_home: bool,
+
+    /// Whether this build wrote a search index, and the navbar should
+    /// therefore have a search box.
+    ///
+    /// The index is written by the site generator, not by the shell, so the
+    /// shell has to be told: a search box with nothing behind it is worse than
+    /// none, because it looks like the search is broken rather than absent.
+    pub search: bool,
 }
 
 /// The component version the reader is in.
