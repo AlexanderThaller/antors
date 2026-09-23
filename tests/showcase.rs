@@ -745,18 +745,6 @@ mod pdf {
         tree,
     };
 
-    /// The one page of the showcase that will not typeset, and why.
-    ///
-    /// `adocers-typst` 0.3 writes unconstrained bold as `*b*old`. Typst reads
-    /// that as an unclosed delimiter: a `*` with a word character after it does
-    /// not close strong emphasis, so the whole document is refused.
-    /// `text.adoc` writes `Unconstrained: **b**old, __i__talic`, and is
-    /// therefore the one page here that has no PDF.
-    ///
-    /// Delete this and the allowances below when the back end emits
-    /// `#strong[b]old` instead.
-    const WILL_NOT_TYPESET: &str = "showcase/2.0/text.pdf";
-
     /// Build the showcase with the PDFs switched on.
     fn build(name: &str) -> (PathBuf, Report) {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -820,6 +808,7 @@ mod pdf {
         for path in [
             "showcase/2.0/index.pdf",
             "showcase/2.0/media.pdf",
+            "showcase/2.0/text.pdf",
             "showcase/2.0/guide/getting-started.pdf",
             "showcase/2.0/api/overview.pdf",
             "showcase/1.0/legacy.pdf",
@@ -828,43 +817,10 @@ mod pdf {
             assert!(is_a_pdf(&out, path), "`{path}` is not a PDF");
         }
 
-        // One per page, less the one the back end will not take, plus the two
-        // component versions that have a manual. Counted rather than listed so
-        // that a page added to the showcase has to be accounted for here.
-        assert!(!out.join(WILL_NOT_TYPESET).exists());
-        assert_eq!(typeset(&out).len(), report.pages - 1 + 2);
-    }
-
-    #[test]
-    fn a_page_the_back_end_will_not_take_costs_only_itself() {
-        let (out, report) = build("pdf-refused");
-
-        let refused: Vec<&str> = report
-            .problems
-            .iter()
-            .filter(|problem| {
-                problem
-                    .message
-                    .starts_with("this page could not be typeset")
-            })
-            .map(|problem| problem.message.as_str())
-            .collect();
-
-        assert_eq!(refused.len(), 1, "{refused:#?}");
-
-        // The page it could not take is named against itself, and the manual
-        // says what that cost rather than silently coming up a page short.
-        assert!(
-            report
-                .problems
-                .iter()
-                .any(|problem| problem.message.contains("missing from this version\'s PDF")),
-            "{:#?}",
-            report.problems
-        );
-
-        // And the manual was still made, out of the pages that did typeset.
-        assert!(is_a_pdf(&out, "showcase/2.0/showcase-2.0.pdf"));
+        // One per page, plus the two component versions that have a manual.
+        // Counted rather than listed so that a page added to the showcase has
+        // to be accounted for here.
+        assert_eq!(typeset(&out).len(), report.pages + 2);
     }
 
     #[test]
@@ -915,17 +871,6 @@ mod pdf {
             html.contains(r#"href="../showcase-2.0.pdf" download="Showcase 2.0 (current).pdf""#),
             "the manual is not offered from the page it is offered on"
         );
-    }
-
-    #[test]
-    fn a_page_with_no_pdf_offers_none() {
-        let (out, _) = build("pdf-refused-button");
-        let html = page(&out, "showcase/2.0/text.html");
-
-        assert!(!html.contains("pdf-page"), "{html}");
-
-        // The manual is still there to offer, and still offered.
-        assert!(html.contains("pdf-manual"), "{html}");
     }
 
     #[test]
