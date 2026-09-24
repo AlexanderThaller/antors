@@ -35,11 +35,17 @@ jobs:
       # whatever `cargo` the runner happens to have. It is the same shell a
       # contributor gets locally, so a green check here means the same thing
       # it means on their machine.
-      - name: Test, clippy and rustfmt
+      - name: Clippy and rustfmt
         run: |
-          nix develop --command cargo test
           nix develop --command cargo clippy --all-targets -- -D warnings
           nix develop --command cargo fmt --check
+
+      # The suites run as a flake check rather than a `cargo test` in the
+      # shell above: it is the same toolchain, but its compiled dependencies
+      # are a derivation of their own that the binary cache hands back on any
+      # push that leaves Cargo.lock alone. See `checks.tests` in flake.nix.
+      - name: Test
+        run: nix build '.#checks.x86_64-linux.tests'
 
       # Read-only: pushing the image is publish-image.yml's job, gated to
       # pushes on main. Building it here is what catches a flake.nix change

@@ -135,3 +135,12 @@ inherits = "release"
 strip = true
 lto = true
 codegen-units = 1
+
+# What the test suites are built with in `nix flake check`: optimized, since the
+# showcase they build is slow unoptimized, but without `deploy`'s LTO and
+# single codegen unit, which only pay off in a binary that is kept — and with
+# the assertions a plain `cargo test` has.
+[profile.ci]
+inherits = "release"
+debug-assertions = true
+overflow-checks = true

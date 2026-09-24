@@ -1,7 +1,14 @@
 name: Publish image
 
+# Runs after nix.yml rather than alongside it. nix.yml already builds
+# `.#container` for the same commit and magic-nix-cache uploads it, so by
+# the time this starts `nix build '.#container'` below is a cache download
+# instead of a second from-scratch compile of the static binary -- and an
+# image is only ever published for a commit whose tests passed.
 on:
-  push:
+  workflow_run:
+    workflows: [ "Nix" ]
+    types: [ completed ]
     branches: [ "main" ]
 
 # packages: write is what lets GITHUB_TOKEN push to this repository's own
@@ -19,14 +26,25 @@ permissions:
 
 jobs:
   publish:
+    # `branches` above matches on the head branch *name*, which a pull
+    # request from a fork can also call `main`. Requiring the run to have
+    # been a push is what limits this to commits that actually landed here.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
 
     steps:
       # persist-credentials: false the same way nix.yml's checkout is:
       # nothing here pushes to git, only to the container registry.
+      #
+      # The commit nix.yml tested, not the default checkout: under
+      # workflow_run that is whatever main points at *now*, which may
+      # already be a later push.
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
 
       - name: Install Nix
@@ -44,7 +62,9 @@ jobs:
 
       - name: Compute short commit sha
         id: sha
-        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: echo "short=${HEAD_SHA::7}" >> "$GITHUB_OUTPUT"
 
       # `nix build` alone would leave `result` a symlink into the store;
       # readlink resolves it to the actual store path so later steps do not
