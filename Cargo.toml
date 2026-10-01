@@ -28,7 +28,7 @@ adocers-typst = { version = "0.3", default-features = false }
 anyhow = "1"
 # Only what reading a repository needs: refs, trees and blobs. No network, no
 # worktree checkout, no index — a build reads history, it does not change it.
-gix = { version = "0.87", default-features = false, features = [
+gix = { version = "0.88", default-features = false, features = [
   "revision",
   "max-performance-safe",
   "sha1",
