@@ -174,6 +174,35 @@ fn images_resolve_across_modules() {
 }
 
 #[test]
+fn a_named_module_s_images_resolve_to_its_own_directory() {
+    let (out, _) = build("module-images");
+    let html = page(&out, "showcase/2.0/guide/getting-started.html");
+
+    // `image::screenshot.svg[]` and `image:screenshot.svg[]` on a page in
+    // `guide`: the page sits at its module's root, so the module's `_images`
+    // is right beside it rather than one directory up.
+    assert!(
+        html.contains(r#"<img src="_images/screenshot.svg" alt="A screenshot from this module""#),
+        "{html}"
+    );
+    assert!(
+        html.contains(r#"<img src="_images/screenshot.svg" alt="screenshot""#),
+        "{html}"
+    );
+
+    // `image::ROOT:logo.svg[]` and its inline form climb out of `guide` to
+    // the root module's.
+    assert!(
+        html.contains(r#"<img src="../_images/logo.svg" alt="The logo from the root module""#),
+        "{html}"
+    );
+    assert!(
+        html.contains(r#"<img src="../_images/logo.svg" alt="logo""#),
+        "{html}"
+    );
+}
+
+#[test]
 fn includes_are_read_through_the_catalog() {
     let (out, _) = build("includes");
     let html = page(&out, "showcase/2.0/includes.html");

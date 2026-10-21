@@ -20,6 +20,15 @@ cargo install antors
 antors build antora-playbook.yml
 ----
 
+== What it looks like
+
+image::screenshot.svg[A screenshot from this module,300]
+
+The same screenshot inline, image:screenshot.svg[screenshot,24], and the logo
+from the root module beside it, image:ROOT:logo.svg[logo,24].
+
+image::ROOT:logo.svg[The logo from the root module,120]
+
 == Next
 
 Read xref:configuration.adoc[] next, or go back to

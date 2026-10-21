@@ -77,14 +77,16 @@ pub fn locate(key: &Key, style: ExtensionStyle) -> Option<Location> {
         segments.push(key.version.clone());
     }
 
-    // Everything above is the component version's root; everything below is
-    // relative to it, and that boundary is what `module_root_path` measures
-    // from.
-    let module_root_depth = segments.len();
-
     if key.module != ROOT_MODULE {
         segments.push(key.module.clone());
     }
+
+    // Everything above is the module's root, which is where its `_images` and
+    // `_attachments` are written, and that boundary is what `module_root_path`
+    // measures from. It has to be taken after the module segment: for ROOT the
+    // module root and the component version's root are one directory, but a
+    // named module's root is a directory below it.
+    let module_root_depth = segments.len();
 
     if let Some(directory) = key.family.output_directory() {
         segments.push(directory.to_string());
@@ -265,8 +267,34 @@ mod tests {
         .unwrap();
 
         assert_eq!(location.url, "/showcase/2.0/guide/start.html");
-        assert_eq!(location.module_root_path, "..");
+        // The page sits in `guide/`, which is its module's root — the same
+        // directory its `_images` are written under.
+        assert_eq!(location.module_root_path, "");
         assert_eq!(location.root_path, "../../..");
+    }
+
+    #[test]
+    fn a_page_below_a_named_module_root_climbs_only_to_that_root() {
+        let location = locate(
+            &key("showcase", "2.0", "guide", Family::Page, "deep/start.adoc"),
+            ExtensionStyle::Default,
+        )
+        .unwrap();
+
+        assert_eq!(location.url, "/showcase/2.0/guide/deep/start.html");
+        assert_eq!(location.module_root_path, "..");
+    }
+
+    #[test]
+    fn indexify_puts_a_named_module_page_a_directory_below_its_root() {
+        let location = locate(
+            &key("showcase", "2.0", "guide", Family::Page, "start.adoc"),
+            ExtensionStyle::Indexify,
+        )
+        .unwrap();
+
+        assert_eq!(location.url, "/showcase/2.0/guide/start/");
+        assert_eq!(location.module_root_path, "..");
     }
 
     #[test]
